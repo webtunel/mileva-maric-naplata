@@ -12,3 +12,6 @@ src-tauri/gen/
 # sqlite runtime db (kiosk data lives in app data dir, not repo)
 *.sqlite
 *.sqlite-*
+
+# built windows installers
+*.exe

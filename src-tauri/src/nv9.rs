@@ -66,7 +66,11 @@ impl SspTransport {
         let response = self.exchange(SSP_ADDRESS, CMD_SYNC, &[])?;
         match response.first().copied() {
             Some(RESPONSE_OK) => {
-                self.next_sequence = SSP_SEQUENCE_BIT;
+                // SYNC resets the sequence chain; the first command AFTER sync goes out
+                // with sequence bit 0 (verified against the working gmarull/nv9biller
+                // NV9USB driver, which resets _sequence to 0 post-sync). It then toggles
+                // to 0x80 on the following command as usual.
+                self.next_sequence = SSP_ADDRESS;
                 Ok(())
             }
             Some(code) => Err(hardware(format!(
