@@ -16,6 +16,7 @@ const SSP_SEQUENCE_BIT: u8 = 0x80;
 
 const CMD_SET_INHIBITS: u8 = 0x02;
 const CMD_SETUP_REQUEST: u8 = 0x05;
+#[allow(dead_code)] // kept for reference; not sent (see initialize_validator)
 const CMD_HOST_PROTOCOL: u8 = 0x06;
 const CMD_POLL: u8 = 0x07;
 const CMD_REJECT: u8 = 0x08;
@@ -27,6 +28,7 @@ const CMD_SYNC: u8 = 0x11;
 const RESPONSE_OK: u8 = 0xf0;
 const RESPONSE_UNKNOWN_COMMAND: u8 = 0xf2;
 
+#[allow(dead_code)] // kept for reference; not negotiated (see initialize_validator)
 const SSP_PROTOCOL_VERSION: u8 = 6;
 const SERIAL_TIMEOUT: Duration = Duration::from_millis(350);
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
@@ -352,9 +354,11 @@ fn initialize_validator(
 ) -> KioskResult<SetupData> {
     transport.sync()?;
 
-    // 0x06 asks the validator to use/confirm plain SSP protocol version 6.
-    let protocol_response = transport.command(CMD_HOST_PROTOCOL, &[SSP_PROTOCOL_VERSION])?;
-    acknowledge_or_notice(&protocol_response, "Host Protocol Version", events)?;
+    // NOTE: we deliberately do NOT send Host Protocol Version (0x06). The working
+    // gmarull/nv9biller NV9USB driver reads correct denominations WITHOUT negotiating a
+    // protocol version, and requesting protocol 6 changes how note values are reported,
+    // which broke the channel*multiplier parse on real Serbian-dinar units. Stay on the
+    // unit's default protocol so Setup Request values are the classic channel*multiplier.
 
     // 0x05 returns identity fields plus channel denominations.
     let setup_response = transport.command(CMD_SETUP_REQUEST, &[])?;

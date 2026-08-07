@@ -126,13 +126,23 @@ pub fn start(
                 }
                 PaymentEvent::NoteInEscrow { value_rsd } => {
                     last_activity = Instant::now();
-                    let decision = if coordinator_cancel.load(Ordering::SeqCst)
-                        || inserted.saturating_add(value_rsd) > total_rsd
-                    {
+                    let cancelling = coordinator_cancel.load(Ordering::SeqCst);
+                    let would_overpay = inserted.saturating_add(value_rsd) > total_rsd;
+                    let decision = if cancelling || would_overpay {
                         EscrowDecision::Reject
                     } else {
                         EscrowDecision::Accept
                     };
+                    // Show the recognized denomination for every note (accepted or not).
+                    let remaining = (total_rsd - inserted).max(0);
+                    let note = if would_overpay && !cancelling {
+                        format!(
+                            "Prepoznato {value_rsd} RSD — previše (ostalo {remaining} RSD, nema kusura)"
+                        )
+                    } else {
+                        format!("Prepoznato {value_rsd} RSD")
+                    };
+                    emit_progress(&app, inserted, total_rsd, false, Some(note));
                     let _ = coordinator_decisions.send(decision);
                 }
                 PaymentEvent::Credited {
