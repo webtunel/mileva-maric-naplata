@@ -813,7 +813,28 @@ pub fn probe(port: &str) -> crate::models::KioskResult<String> {
     }
 
     let number = u32::from_be_bytes([response[1], response[2], response[3], response[4]]);
-    Ok(format!("NV9 serial {number} on {port}"))
+
+    // Diagnostic dump so real-unit denomination parsing can be verified from the admin
+    // Devices tab: raw Setup Request bytes + how we currently interpret each channel.
+    let setup = transport.command(CMD_SETUP_REQUEST, &[]).unwrap_or_default();
+    let hex: String = setup
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let channels = match parse_setup_response(&setup) {
+        Ok(data) => data
+            .channel_values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| format!("k{}={}", i + 1, v))
+            .collect::<Vec<_>>()
+            .join(" "),
+        Err(error) => format!("parse: {error}"),
+    };
+    Ok(format!(
+        "NV9 serial {number} on {port} | kanali: {channels} | setup: {hex}"
+    ))
 }
 
 /// List serial device names for the settings UI. USB metadata is not equally

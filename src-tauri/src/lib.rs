@@ -78,6 +78,8 @@ pub fn run() {
             admin::admin_change_pin,
             admin::admin_export_csv,
             admin::admin_device_status,
+            admin::admin_set_devices,
+            admin::admin_set_simple_mode,
             admin::admin_exit,
         ])
         .run(tauri::generate_context!())

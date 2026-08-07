@@ -120,6 +120,12 @@ pub struct Settings {
     /// Printer USB ids; None = auto-detect first ESC/POS device.
     pub printer_vendor_id: Option<u16>,
     pub printer_product_id: Option<u16>,
+    /// Printer serial (virtual COM) port, e.g. "COM4" (Bixolon BXLVCOM4USB).
+    /// When set, tickets print over this port instead of raw USB.
+    pub printer_port: Option<String>,
+    /// Simple mode: no touch. Always sells one adult ticket; when the exact
+    /// price is inserted, the ticket prints automatically and the machine loops.
+    pub simple_mode: bool,
 }
 
 impl Default for Settings {
@@ -135,6 +141,8 @@ impl Default for Settings {
             nv9_port: None,
             printer_vendor_id: None,
             printer_product_id: None,
+            printer_port: None,
+            simple_mode: false,
         }
     }
 }

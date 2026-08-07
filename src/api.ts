@@ -71,6 +71,8 @@ export interface Settings {
   nv9_port: string | null;
   printer_vendor_id: number | null;
   printer_product_id: number | null;
+  printer_port: string | null;
+  simple_mode: boolean;
 }
 
 export interface ZReport {
@@ -152,4 +154,14 @@ export function adminExportCsv(from: number, to: number): Promise<string> {
 /** Verifies the PIN and quits the kiosk app (maintenance exit). */
 export function adminExit(pin: string): Promise<void> {
   return invoke<void>("admin_exit", { pin });
+}
+
+/** Sets device ports. Empty string -> null (auto/USB). */
+export function adminSetDevices(nv9Port: string, printerPort: string): Promise<void> {
+  return invoke<void>("admin_set_devices", { nv9Port, printerPort });
+}
+
+/** Toggles the touchless single-adult-ticket simple mode. */
+export function adminSetSimpleMode(enabled: boolean): Promise<void> {
+  return invoke<void>("admin_set_simple_mode", { enabled });
 }

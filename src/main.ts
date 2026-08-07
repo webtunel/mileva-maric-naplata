@@ -4,6 +4,7 @@ import { mountWelcome, type ScreenController } from "./screens/welcome";
 import { mountSelect } from "./screens/select";
 import { mountPay } from "./screens/pay";
 import { mountSuccess } from "./screens/success";
+import { mountSimple } from "./screens/simple";
 import { initAdmin } from "./admin";
 
 let current: ScreenController | null = null;
@@ -19,6 +20,8 @@ function mountScreen(screen: Screen, container: HTMLElement): ScreenController {
       return mountPay(container);
     case Screen.Success:
       return mountSuccess(container);
+    case Screen.Simple:
+      return mountSimple(container);
   }
 }
 
@@ -72,7 +75,8 @@ async function bootstrap(): Promise<void> {
 
   try {
     const config = await getConfig();
-    setState({ config });
+    // Simple (touchless) mode jumps straight to the auto-selling screen.
+    setState(config.simple_mode ? { config, screen: Screen.Simple } : { config });
   } catch (err) {
     // Not fatal — screens degrade gracefully without config (e.g. dev preview
     // in a plain browser with no Tauri bridge). Surface it non-blockingly.

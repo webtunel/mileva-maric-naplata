@@ -10,7 +10,9 @@ import {
   adminListSales,
   adminLogin,
   adminReprint,
+  adminSetDevices,
   adminSetPrices,
+  adminSetSimpleMode,
   adminZReport,
   deviceStatus,
   type DeviceStatus,
@@ -321,37 +323,57 @@ async function renderSales(el: HTMLElement): Promise<void> {
 }
 
 async function renderDevices(el: HTMLElement): Promise<void> {
-  async function load(): Promise<void> {
-    el.innerHTML = `<p class="admin-loading">Provera uređaja...</p>`;
-    let status: DeviceStatus;
-    try {
-      status = await deviceStatus();
-    } catch (err) {
-      el.innerHTML = `<p class="admin-error">Greška: ${escapeHtml(String(err))}</p>`;
-      return;
-    }
-    el.innerHTML = `
-      <div class="device-row">
-        <span class="device-dot ${status.validator_connected ? "device-ok" : "device-bad"}"></span>
-        <div>
-          <div class="device-name">NV9 validator</div>
-          <div class="device-detail">${escapeHtml(status.validator_detail || (status.validator_connected ? "Povezan" : "Nije povezan"))}</div>
-        </div>
-      </div>
-      <div class="device-row">
-        <span class="device-dot ${status.printer_connected ? "device-ok" : "device-bad"}"></span>
-        <div>
-          <div class="device-name">ESC/POS štampač</div>
-          <div class="device-detail">${escapeHtml(status.printer_detail || (status.printer_connected ? "Povezan" : "Nije povezan"))}</div>
-        </div>
-      </div>
-      <div class="admin-actions">
-        <button type="button" class="btn btn-primary" id="refresh-devices">Osveži</button>
-      </div>
-    `;
-    el.querySelector<HTMLButtonElement>("#refresh-devices")!.addEventListener("click", () => void load());
+  el.innerHTML = `<p class="admin-loading">Provera uređaja...</p>`;
+  let status: DeviceStatus;
+  let settings: Settings;
+  try {
+    [status, settings] = await Promise.all([deviceStatus(), adminGetSettings()]);
+  } catch (err) {
+    el.innerHTML = `<p class="admin-error">Greška: ${escapeHtml(String(err))}</p>`;
+    return;
   }
-  await load();
+  el.innerHTML = `
+    <div class="device-row">
+      <span class="device-dot ${status.validator_connected ? "device-ok" : "device-bad"}"></span>
+      <div>
+        <div class="device-name">NV9 validator</div>
+        <div class="device-detail">${escapeHtml(status.validator_detail || (status.validator_connected ? "Povezan" : "Nije povezan"))}</div>
+      </div>
+    </div>
+    <div class="device-row">
+      <span class="device-dot ${status.printer_connected ? "device-ok" : "device-bad"}"></span>
+      <div>
+        <div class="device-name">Štampač</div>
+        <div class="device-detail">${escapeHtml(status.printer_detail || (status.printer_connected ? "Povezan" : "Nije povezan"))}</div>
+      </div>
+    </div>
+    <div class="pin-form">
+      <label>NV9 COM port (prazno = auto)<input type="text" id="cfg-nv9" class="admin-input" placeholder="auto" value="${escapeHtml(settings.nv9_port ?? "")}" /></label>
+      <label>Printer COM port (npr. COM4; prazno = USB)<input type="text" id="cfg-printer" class="admin-input" placeholder="COM4" value="${escapeHtml(settings.printer_port ?? "")}" /></label>
+      <label class="cfg-check"><input type="checkbox" id="cfg-simple" ${settings.simple_mode ? "checked" : ""} /> Jednostavni režim (bez touch-a — uvek karta za odrasle)</label>
+      <div class="admin-actions">
+        <button type="button" class="btn btn-primary" id="save-devices">Sačuvaj</button>
+        <button type="button" class="btn btn-ghost" id="refresh-devices">Osveži status</button>
+        <span class="admin-status" id="dev-status"></span>
+      </div>
+      <p class="cfg-hint">Portovi se primenjuju na sledeću transakciju. Promena režima traži restart aplikacije.</p>
+    </div>
+  `;
+  const devStatus = el.querySelector<HTMLElement>("#dev-status")!;
+  el.querySelector<HTMLButtonElement>("#refresh-devices")!.addEventListener("click", () => void renderDevices(el));
+  el.querySelector<HTMLButtonElement>("#save-devices")!.addEventListener("click", async () => {
+    const nv9 = el.querySelector<HTMLInputElement>("#cfg-nv9")!.value;
+    const printer = el.querySelector<HTMLInputElement>("#cfg-printer")!.value;
+    const simple = el.querySelector<HTMLInputElement>("#cfg-simple")!.checked;
+    devStatus.textContent = "Čuvanje...";
+    try {
+      await adminSetDevices(nv9, printer);
+      await adminSetSimpleMode(simple);
+      devStatus.textContent = "Sačuvano.";
+    } catch (err) {
+      devStatus.textContent = `Greška: ${String(err)}`;
+    }
+  });
 }
 
 function renderPin(el: HTMLElement): void {

@@ -67,6 +67,36 @@ pub fn probe(target: &PrinterTarget) -> crate::models::KioskResult<String> {
     ))
 }
 
+/// Print via a serial (virtual COM) port such as the Bixolon BXLVCOM4USB virtual port.
+/// Reuses the exact same ESC/POS job bytes as the USB path — just a different transport.
+pub fn print_tickets_serial(
+    port: &str,
+    museum: &str,
+    tickets: &[crate::models::PrintedTicket],
+) -> crate::models::KioskResult<()> {
+    let mut serial = serialport::new(port, 9600)
+        .timeout(std::time::Duration::from_secs(5))
+        .open()
+        .map_err(|error| {
+            KioskError::Print(format!("ne mogu da otvorim printer port {port}: {error}"))
+        })?;
+    for ticket in tickets {
+        let job = build_ticket_job(museum, ticket)?;
+        std::io::Write::write_all(&mut *serial, &job)
+            .map_err(|error| KioskError::Print(format!("greška pri štampi na {port}: {error}")))?;
+    }
+    let _ = std::io::Write::flush(&mut *serial);
+    Ok(())
+}
+
+pub fn probe_serial(port: &str) -> crate::models::KioskResult<String> {
+    serialport::new(port, 9600)
+        .timeout(std::time::Duration::from_millis(600))
+        .open()
+        .map_err(|error| KioskError::Print(format!("printer port {port} nedostupan: {error}")))?;
+    Ok(format!("Serijski printer na {port} (otvoren)"))
+}
+
 /// Opens the selected USB device and claims the interface containing its bulk OUT endpoint.
 ///
 /// On Windows, raw libusb access requires the printer to use a WinUSB,

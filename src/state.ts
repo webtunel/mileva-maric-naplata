@@ -8,6 +8,7 @@ export enum Screen {
   Select = "select",
   Pay = "pay",
   Success = "success",
+  Simple = "simple",
 }
 
 /** Ticket qty keyed by TicketType.code. Absent key == 0. */

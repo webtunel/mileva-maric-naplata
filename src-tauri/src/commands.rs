@@ -189,12 +189,14 @@ pub async fn print_tickets(
     let settings = state.settings.lock().clone();
     let target = crate::config::printer_target(&settings);
     let museum = settings.museum_name.clone();
+    let printer_port = settings.printer_port.clone();
     let tickets = sale.tickets.clone();
 
-    // USB bulk IO off the webview thread.
+    // Printer IO off the webview thread. Serial (virtual COM) when configured, else raw USB.
     let tickets_for_print = tickets.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        crate::printer::print_tickets(&target, &museum, &tickets_for_print)
+    tauri::async_runtime::spawn_blocking(move || match printer_port {
+        Some(port) => crate::printer::print_tickets_serial(&port, &museum, &tickets_for_print),
+        None => crate::printer::print_tickets(&target, &museum, &tickets_for_print),
     })
     .await
     .map_err(|_| KioskError::Print("štampa prekinuta".into()))??;
@@ -218,13 +220,18 @@ pub async fn device_status(state: State<'_, AppState>) -> KioskResult<DeviceStat
     let settings = state.settings.lock().clone();
     let port = crate::config::nv9_cfg(&settings).port;
     let target = crate::config::printer_target(&settings);
+    let printer_port = settings.printer_port.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
         let (validator_connected, validator_detail) = match crate::nv9::probe(&port) {
             Ok(detail) => (true, detail),
             Err(e) => (false, e.to_string()),
         };
-        let (printer_connected, printer_detail) = match crate::printer::probe(&target) {
+        let printer_result = match &printer_port {
+            Some(p) => crate::printer::probe_serial(p),
+            None => crate::printer::probe(&target),
+        };
+        let (printer_connected, printer_detail) = match printer_result {
             Ok(detail) => (true, detail),
             Err(e) => (false, e.to_string()),
         };

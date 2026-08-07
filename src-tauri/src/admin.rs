@@ -174,6 +174,43 @@ pub async fn admin_device_status(
     })
 }
 
+/// Postavlja portove uređaja (NV9 COM i printer virtuelni COM). Prazno = auto/USB.
+#[tauri::command]
+pub async fn admin_set_devices(
+    state: tauri::State<'_, AppState>,
+    nv9_port: Option<String>,
+    printer_port: Option<String>,
+) -> Result<(), KioskError> {
+    let mut settings = state.settings.lock();
+    settings.nv9_port = normalize_port(nv9_port);
+    settings.printer_port = normalize_port(printer_port);
+    state.db.save_settings(&settings)?;
+    Ok(())
+}
+
+/// Uključuje/isključuje jednostavni režim (bez touch-a, uvek jedna karta za odrasle).
+#[tauri::command]
+pub async fn admin_set_simple_mode(
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), KioskError> {
+    let mut settings = state.settings.lock();
+    settings.simple_mode = enabled;
+    state.db.save_settings(&settings)?;
+    Ok(())
+}
+
+fn normalize_port(value: Option<String>) -> Option<String> {
+    value.and_then(|s| {
+        let trimmed = s.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
+}
+
 /// Verifikuje PIN pa gasi aplikaciju — izlaz iz kiosk režima za održavanje.
 #[tauri::command]
 pub async fn admin_exit(
