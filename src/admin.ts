@@ -348,8 +348,8 @@ async function renderDevices(el: HTMLElement): Promise<void> {
       </div>
     </div>
     <div class="pin-form">
-      <label>NV9 COM port (prazno = auto)<input type="text" id="cfg-nv9" class="admin-input" placeholder="auto" value="${escapeHtml(settings.nv9_port ?? "")}" /></label>
-      <label>Printer COM port (npr. COM4; prazno = USB)<input type="text" id="cfg-printer" class="admin-input" placeholder="COM4" value="${escapeHtml(settings.printer_port ?? "")}" /></label>
+      <label>NV9 COM port (podrazumevano COM3)<input type="text" id="cfg-nv9" class="admin-input" placeholder="COM3" value="${escapeHtml(settings.nv9_port ?? "COM3")}" /></label>
+      <label>Printer COM port (podrazumevano COM4; prazno = USB)<input type="text" id="cfg-printer" class="admin-input" placeholder="COM4" value="${escapeHtml(settings.printer_port ?? "COM4")}" /></label>
       <label class="cfg-check"><input type="checkbox" id="cfg-simple" ${settings.simple_mode ? "checked" : ""} /> Jednostavni režim (bez touch-a — uvek karta za odrasle)</label>
       <div class="admin-actions">
         <button type="button" class="btn btn-primary" id="save-devices">Sačuvaj</button>

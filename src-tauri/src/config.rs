@@ -34,13 +34,15 @@ pub fn bootstrap(db: &crate::db::Db) -> KioskResult<Vec<u8>> {
     Ok(raw)
 }
 
-/// Resolves NV9 serial port config: explicit setting wins, else first auto-detected
-/// port, else a "COM3" fallback so Windows setup never fails to construct a config.
+/// Resolves NV9 serial port: explicit setting wins, else the "COM3" default. We do NOT
+/// auto-pick the first serial port here — with a printer virtual COM (e.g. COM4) also
+/// present, that could grab the wrong device. COM3 is the predictable default; change it
+/// in admin → Uređaji if the validator is on another port.
 pub fn nv9_cfg(settings: &Settings) -> crate::nv9::Nv9Config {
     let port = settings
         .nv9_port
         .clone()
-        .or_else(|| crate::nv9::list_ports().into_iter().next())
+        .filter(|p| !p.trim().is_empty())
         .unwrap_or_else(|| "COM3".to_string());
     crate::nv9::Nv9Config { port, baud: 9600 }
 }

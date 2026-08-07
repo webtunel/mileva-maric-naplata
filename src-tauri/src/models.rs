@@ -142,10 +142,10 @@ impl Default for Settings {
             ],
             max_total_tickets: 10,
             museum_name: "Muzej Milene Marić".into(),
-            nv9_port: None,
+            nv9_port: Some("COM3".into()),
             printer_vendor_id: None,
             printer_product_id: None,
-            printer_port: None,
+            printer_port: Some("COM4".into()),
             simple_mode: false,
         }
     }
