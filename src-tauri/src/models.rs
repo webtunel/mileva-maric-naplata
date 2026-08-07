@@ -110,7 +110,11 @@ pub struct DeviceStatus {
 }
 
 /// Persisted, admin-editable configuration.
+/// `#[serde(default)]` makes loading tolerant of older stored settings that predate a
+/// newly added field — missing fields fall back to `Settings::default()` instead of
+/// failing deserialization (which would crash startup).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     pub ticket_types: Vec<TicketType>,
     pub max_total_tickets: u32,

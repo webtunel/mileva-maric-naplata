@@ -116,10 +116,10 @@ impl Db {
             .optional()
             .map_err(db_error)?;
 
-        match value {
-            Some(json) => serde_json::from_str(&json).map_err(db_error),
-            None => Ok(Settings::default()),
-        }
+        // Never let a malformed/older settings row brick the kiosk: fall back to defaults.
+        Ok(value
+            .and_then(|json| serde_json::from_str(&json).ok())
+            .unwrap_or_default())
     }
 
     pub fn save_settings(&self, s: &Settings) -> KioskResult<()> {
