@@ -289,6 +289,34 @@ fn parse_setup_response(response: &[u8]) -> KioskResult<SetupData> {
         )));
     }
 
+    let protocol_version = response
+        .get(real_multiplier_start + 3)
+        .copied()
+        .unwrap_or(0);
+
+    // Protocol version >= 6 carries the REAL per-channel denominations in an expanded
+    // block that follows [real_multiplier(3) | protocol(1)]:
+    //   [3*n per-channel country codes] then [4-byte little-endian value per channel].
+    // On a Serbian-dinar unit these are 10/20/50/100/200/500/1000/2000/5000. The base
+    // channel_values are only indices (1..n) scaled by a coarse multiplier, so whenever
+    // the expanded block is present we MUST use it — verified against a real NV9 dump.
+    let expanded_start = real_multiplier_start + 4 + 3 * channel_count;
+    if protocol_version >= 6 && response.len() >= expanded_start + 4 * channel_count {
+        let mut channel_values = Vec::with_capacity(channel_count);
+        for i in 0..channel_count {
+            let off = expanded_start + 4 * i;
+            let value = u32::from_le_bytes([
+                response[off],
+                response[off + 1],
+                response[off + 2],
+                response[off + 3],
+            ]);
+            channel_values.push(i64::from(value));
+        }
+        return Ok(SetupData { channel_values });
+    }
+
+    // Legacy path (protocol < 6): value = channel byte * multiplier.
     let value_multiplier = u24_be(&response[9..12]);
     let real_value_multiplier = u24_be(&response[real_multiplier_start..real_multiplier_start + 3]);
     let multiplier = if value_multiplier > 0 {
