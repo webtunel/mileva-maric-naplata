@@ -126,23 +126,21 @@ pub fn start(
                 }
                 PaymentEvent::NoteInEscrow { value_rsd } => {
                     last_activity = Instant::now();
-                    let cancelling = coordinator_cancel.load(Ordering::SeqCst);
-                    let would_overpay = inserted.saturating_add(value_rsd) > total_rsd;
-                    let decision = if cancelling || would_overpay {
+                    // Accept every note, even one larger than the amount owed. No change is
+                    // dispensed (NV9 cannot), so any overpayment is simply kept. Only reject
+                    // notes while the transaction is being cancelled.
+                    let decision = if coordinator_cancel.load(Ordering::SeqCst) {
                         EscrowDecision::Reject
                     } else {
                         EscrowDecision::Accept
                     };
-                    // Show the recognized denomination for every note (accepted or not).
-                    let remaining = (total_rsd - inserted).max(0);
-                    let note = if would_overpay && !cancelling {
-                        format!(
-                            "Prepoznato {value_rsd} RSD — previše (ostalo {remaining} RSD, nema kusura)"
-                        )
-                    } else {
-                        format!("Prepoznato {value_rsd} RSD")
-                    };
-                    emit_progress(&app, inserted, total_rsd, false, Some(note));
+                    emit_progress(
+                        &app,
+                        inserted,
+                        total_rsd,
+                        false,
+                        Some(format!("Prepoznato {value_rsd} RSD")),
+                    );
                     let _ = coordinator_decisions.send(decision);
                 }
                 PaymentEvent::Credited {

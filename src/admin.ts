@@ -349,7 +349,8 @@ async function renderDevices(el: HTMLElement): Promise<void> {
     </div>
     <div class="pin-form">
       <label>NV9 COM port (podrazumevano COM3)<input type="text" id="cfg-nv9" class="admin-input" placeholder="COM3" value="${escapeHtml(settings.nv9_port ?? "COM3")}" /></label>
-      <label>Printer COM port (podrazumevano COM4; prazno = USB)<input type="text" id="cfg-printer" class="admin-input" placeholder="COM4" value="${escapeHtml(settings.printer_port ?? "COM4")}" /></label>
+      <label>Printer — Windows ime (najpouzdanije; prazno = koristi COM/USB)<input type="text" id="cfg-win" class="admin-input" placeholder="BIXOLON SRP-Q300" value="${escapeHtml(settings.printer_windows_name ?? "")}" /></label>
+      <label>Printer COM port (koristi se ako je Windows ime prazno)<input type="text" id="cfg-printer" class="admin-input" placeholder="COM4" value="${escapeHtml(settings.printer_port ?? "")}" /></label>
       <label class="cfg-check"><input type="checkbox" id="cfg-simple" ${settings.simple_mode ? "checked" : ""} /> Jednostavni režim (bez touch-a — uvek karta za odrasle)</label>
       <div class="admin-actions">
         <button type="button" class="btn btn-primary" id="save-devices">Sačuvaj</button>
@@ -364,10 +365,11 @@ async function renderDevices(el: HTMLElement): Promise<void> {
   el.querySelector<HTMLButtonElement>("#save-devices")!.addEventListener("click", async () => {
     const nv9 = el.querySelector<HTMLInputElement>("#cfg-nv9")!.value;
     const printer = el.querySelector<HTMLInputElement>("#cfg-printer")!.value;
+    const win = el.querySelector<HTMLInputElement>("#cfg-win")!.value;
     const simple = el.querySelector<HTMLInputElement>("#cfg-simple")!.checked;
     devStatus.textContent = "Čuvanje...";
     try {
-      await adminSetDevices(nv9, printer);
+      await adminSetDevices(nv9, printer, win);
       await adminSetSimpleMode(simple);
       devStatus.textContent = "Sačuvano.";
     } catch (err) {

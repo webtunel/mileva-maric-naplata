@@ -180,10 +180,12 @@ pub async fn admin_set_devices(
     state: tauri::State<'_, AppState>,
     nv9_port: Option<String>,
     printer_port: Option<String>,
+    printer_windows_name: Option<String>,
 ) -> Result<(), KioskError> {
     let mut settings = state.settings.lock();
     settings.nv9_port = normalize_port(nv9_port);
     settings.printer_port = normalize_port(printer_port);
+    settings.printer_windows_name = normalize_port(printer_windows_name);
     state.db.save_settings(&settings)?;
     Ok(())
 }

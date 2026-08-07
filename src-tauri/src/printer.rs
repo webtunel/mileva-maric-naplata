@@ -97,6 +97,118 @@ pub fn probe_serial(port: &str) -> crate::models::KioskResult<String> {
     Ok(format!("Serijski printer na {port} (otvoren)"))
 }
 
+// --- Windows print-spooler transport (raw ESC/POS to a named printer, e.g. the
+// manufacturer's "BIXOLON SRP-Q300" driver). Most robust on Windows: no Zadig, no
+// COM-port fighting — the native driver owns the USB. ---
+
+#[cfg(windows)]
+mod winspool {
+    use std::os::raw::c_void;
+    pub type Handle = *mut c_void;
+    #[repr(C)]
+    pub struct DocInfo1W {
+        pub p_doc_name: *mut u16,
+        pub p_output_file: *mut u16,
+        pub p_datatype: *mut u16,
+    }
+    #[link(name = "winspool")]
+    extern "system" {
+        pub fn OpenPrinterW(name: *mut u16, handle: *mut Handle, defaults: *mut c_void) -> i32;
+        pub fn StartDocPrinterW(handle: Handle, level: u32, doc_info: *mut u8) -> u32;
+        pub fn StartPagePrinter(handle: Handle) -> i32;
+        pub fn WritePrinter(handle: Handle, buf: *mut c_void, len: u32, written: *mut u32) -> i32;
+        pub fn EndPagePrinter(handle: Handle) -> i32;
+        pub fn EndDocPrinter(handle: Handle) -> i32;
+        pub fn ClosePrinter(handle: Handle) -> i32;
+    }
+}
+
+#[cfg(windows)]
+fn wide(text: &str) -> Vec<u16> {
+    text.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+#[cfg(windows)]
+pub fn print_tickets_windows(
+    printer_name: &str,
+    museum: &str,
+    tickets: &[crate::models::PrintedTicket],
+) -> crate::models::KioskResult<()> {
+    let mut bytes = Vec::new();
+    for ticket in tickets {
+        bytes.extend_from_slice(&build_ticket_job(museum, ticket)?);
+    }
+    let mut name = wide(printer_name);
+    let mut doc_name = wide("Ulaznica");
+    let mut datatype = wide("RAW");
+    unsafe {
+        let mut handle: winspool::Handle = std::ptr::null_mut();
+        if winspool::OpenPrinterW(name.as_mut_ptr(), &mut handle, std::ptr::null_mut()) == 0 {
+            return Err(KioskError::Print(format!(
+                "ne mogu da otvorim Windows štampač '{printer_name}' (proveri ime i da li je funkcionalan)"
+            )));
+        }
+        let mut doc = winspool::DocInfo1W {
+            p_doc_name: doc_name.as_mut_ptr(),
+            p_output_file: std::ptr::null_mut(),
+            p_datatype: datatype.as_mut_ptr(),
+        };
+        let job = winspool::StartDocPrinterW(handle, 1, &mut doc as *mut _ as *mut u8);
+        if job == 0 {
+            winspool::ClosePrinter(handle);
+            return Err(KioskError::Print("StartDocPrinter nije uspeo".into()));
+        }
+        winspool::StartPagePrinter(handle);
+        let mut written: u32 = 0;
+        let ok = winspool::WritePrinter(
+            handle,
+            bytes.as_ptr() as *mut std::os::raw::c_void,
+            bytes.len() as u32,
+            &mut written,
+        );
+        winspool::EndPagePrinter(handle);
+        winspool::EndDocPrinter(handle);
+        winspool::ClosePrinter(handle);
+        if ok == 0 || (written as usize) < bytes.len() {
+            return Err(KioskError::Print("štampač nije primio sve podatke".into()));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+pub fn probe_windows(printer_name: &str) -> crate::models::KioskResult<String> {
+    let mut name = wide(printer_name);
+    unsafe {
+        let mut handle: winspool::Handle = std::ptr::null_mut();
+        if winspool::OpenPrinterW(name.as_mut_ptr(), &mut handle, std::ptr::null_mut()) == 0 {
+            return Err(KioskError::Print(format!(
+                "Windows štampač '{printer_name}' nije dostupan"
+            )));
+        }
+        winspool::ClosePrinter(handle);
+    }
+    Ok(format!("Windows štampač '{printer_name}' (spooler ok)"))
+}
+
+#[cfg(not(windows))]
+pub fn print_tickets_windows(
+    _printer_name: &str,
+    _museum: &str,
+    _tickets: &[crate::models::PrintedTicket],
+) -> crate::models::KioskResult<()> {
+    Err(KioskError::Print(
+        "Windows štampa je dostupna samo na Windows-u".into(),
+    ))
+}
+
+#[cfg(not(windows))]
+pub fn probe_windows(_printer_name: &str) -> crate::models::KioskResult<String> {
+    Err(KioskError::Print(
+        "Windows štampa je dostupna samo na Windows-u".into(),
+    ))
+}
+
 /// Opens the selected USB device and claims the interface containing its bulk OUT endpoint.
 ///
 /// On Windows, raw libusb access requires the printer to use a WinUSB,

@@ -125,8 +125,10 @@ pub struct Settings {
     pub printer_vendor_id: Option<u16>,
     pub printer_product_id: Option<u16>,
     /// Printer serial (virtual COM) port, e.g. "COM4" (Bixolon BXLVCOM4USB).
-    /// When set, tickets print over this port instead of raw USB.
     pub printer_port: Option<String>,
+    /// Windows printer name for raw-spooler printing, e.g. "BIXOLON SRP-Q300".
+    /// Highest priority when set: uses the native Windows driver (most reliable).
+    pub printer_windows_name: Option<String>,
     /// Simple mode: no touch. Always sells one adult ticket; when the exact
     /// price is inserted, the ticket prints automatically and the machine loops.
     pub simple_mode: bool,
@@ -145,7 +147,8 @@ impl Default for Settings {
             nv9_port: Some("COM3".into()),
             printer_vendor_id: None,
             printer_product_id: None,
-            printer_port: Some("COM4".into()),
+            printer_port: None,
+            printer_windows_name: Some("BIXOLON SRP-Q300".into()),
             simple_mode: false,
         }
     }

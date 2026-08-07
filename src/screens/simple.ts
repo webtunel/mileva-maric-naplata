@@ -17,7 +17,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
       <div class="simple-title">Kupovina ulaznice</div>
       <div class="simple-price">${price} RSD</div>
       <div class="simple-sub">${escapeHtml(label)} — ubacite tačan iznos</div>
-      <div class="pay-notice">⚠ Automat ne vraća kusur — ubacite tačan iznos.</div>
+      <div class="pay-notice">⚠ Automat ne vraća kusur.</div>
       <div class="pay-panels">
         <div class="pay-panel"><div class="pay-panel-label">UBAČENO</div><div class="pay-panel-amount" id="s-inserted">0 RSD</div></div>
         <div class="pay-panel"><div class="pay-panel-label">POTREBNO</div><div class="pay-panel-amount" id="s-needed">${price} RSD</div></div>
@@ -34,6 +34,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
   let unlisten: UnlistenFn | null = null;
   let stopped = false;
   let returnedStreak = 0;
+  let countdownTimer = 0;
 
   onPaymentProgress((p) => {
     if (stopped) return;
@@ -72,14 +73,26 @@ export function mountSimple(container: HTMLElement): ScreenController {
       statusEl.classList.remove("pay-status-warn");
       try {
         await printTickets(outcome.sale_id);
-        statusEl.textContent = "Uzmite kartu ispod. Hvala!";
       } catch (err) {
         statusEl.textContent = `Karta plaćena, štampa nije uspela: ${String(err)}`;
       }
-      window.setTimeout(() => {
-        resetLine("Ubacite novac...");
-        void runOnce();
-      }, 6000);
+      // Count down for the next customer, then auto-start a fresh session.
+      let n = 20;
+      statusEl.textContent = `Uzmite kartu. Sledeći kupac za ${n}s...`;
+      countdownTimer = window.setInterval(() => {
+        if (stopped) {
+          window.clearInterval(countdownTimer);
+          return;
+        }
+        n -= 1;
+        if (n <= 0) {
+          window.clearInterval(countdownTimer);
+          resetLine("Ubacite novac...");
+          void runOnce();
+          return;
+        }
+        statusEl.textContent = `Uzmite kartu. Sledeći kupac za ${n}s...`;
+      }, 1000);
     } catch {
       // cancel / timeout / hardware error — reset and keep waiting
       resetLine("Ubacite novac...");
@@ -99,6 +112,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
     update(_state: AppState): void {},
     unmount(): void {
       stopped = true;
+      window.clearInterval(countdownTimer);
       unlisten?.();
     },
   };

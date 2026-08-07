@@ -7,7 +7,7 @@ export function mountPay(container: HTMLElement): ScreenController {
   container.innerHTML = `
     <div class="screen screen-pay">
       <h1 class="title">Ubacite novčanice</h1>
-      <div class="pay-notice">⚠ Automat ne vraća kusur — ubacite tačan iznos.</div>
+      <div class="pay-notice">⚠ Automat ne vraća kusur.</div>
       <div class="pay-panels">
         <div class="pay-panel">
           <div class="pay-panel-label">UBAČENO</div>

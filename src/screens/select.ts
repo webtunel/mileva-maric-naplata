@@ -12,7 +12,7 @@ export function mountSelect(container: HTMLElement): ScreenController {
       <div class="select-footer">
         <div class="select-total">
           Ukupno za plaćanje <span id="total-amount">0</span> RSD
-          <span class="select-nochange">Automat ne vraća kusur — plaćanje tačnim iznosom</span>
+          <span class="select-nochange">Automat ne vraća kusur</span>
         </div>
         <button type="button" class="btn btn-primary btn-huge" id="ok-btn" disabled>OK</button>
       </div>

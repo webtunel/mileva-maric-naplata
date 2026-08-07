@@ -72,6 +72,7 @@ export interface Settings {
   printer_vendor_id: number | null;
   printer_product_id: number | null;
   printer_port: string | null;
+  printer_windows_name: string | null;
   simple_mode: boolean;
 }
 
@@ -156,9 +157,13 @@ export function adminExit(pin: string): Promise<void> {
   return invoke<void>("admin_exit", { pin });
 }
 
-/** Sets device ports. Empty string -> null (auto/USB). */
-export function adminSetDevices(nv9Port: string, printerPort: string): Promise<void> {
-  return invoke<void>("admin_set_devices", { nv9Port, printerPort });
+/** Sets device ports + Windows printer name. Empty string -> null (auto/USB). */
+export function adminSetDevices(
+  nv9Port: string,
+  printerPort: string,
+  printerWindowsName: string
+): Promise<void> {
+  return invoke<void>("admin_set_devices", { nv9Port, printerPort, printerWindowsName });
 }
 
 /** Toggles the touchless single-adult-ticket simple mode. */
