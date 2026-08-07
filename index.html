@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="sr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0, user-scalable=no" />
+    <title>Muzej Milene Marić — Sistem za naplatu karata</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="bg-layer" aria-hidden="true"></div>
+      <div class="bg-overlay" aria-hidden="true"></div>
+
+      <div id="admin-hotzone" class="admin-hotzone" aria-hidden="true"></div>
+
+      <header class="app-header">
+        <div class="app-header-titles">
+          <div class="app-header-museum">Muzej Milene Marić</div>
+          <div class="app-header-sub">SISTEM ZA NAPLATU KARATA</div>
+        </div>
+        <div class="app-header-clock" id="clock">00:00:00</div>
+      </header>
+
+      <main id="screen" class="screen-outlet"></main>
+
+      <div id="toast" class="toast toast-hidden"></div>
+      <div id="admin-root"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

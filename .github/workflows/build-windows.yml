@@ -1,0 +1,42 @@
+name: build-windows
+
+# Builds the Windows kiosk installer (.exe / NSIS) on a GitHub-hosted Windows runner,
+# so no local Windows machine is needed. Trigger by pushing, or run manually from the
+# Actions tab (workflow_dispatch). The installer is uploaded as a downloadable artifact.
+
+on:
+  push:
+    branches: [main, master, development]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: npm install
+
+      - name: Build Tauri app (NSIS installer + exe)
+        run: npm run tauri build
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiosk-naplata-windows
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/kiosk-naplata.exe
+          if-no-files-found: error

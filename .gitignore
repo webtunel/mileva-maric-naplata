@@ -1,0 +1,14 @@
+# deps / build
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# env / local
+.env
+.DS_Store
+*.log
+
+# sqlite runtime db (kiosk data lives in app data dir, not repo)
+*.sqlite
+*.sqlite-*
