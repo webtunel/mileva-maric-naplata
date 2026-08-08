@@ -22,6 +22,22 @@ fn non_empty(value: Option<String>) -> Option<String> {
     value.filter(|s| !s.trim().is_empty())
 }
 
+/// Append a timestamped line to app_data/debug.log — payment-flow diagnostics for the
+/// deployed kiosk (no console there). Best effort; never fails the caller.
+pub fn dlog(app: &tauri::AppHandle, msg: &str) {
+    if let Ok(dir) = app.path().app_data_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join("debug.log"))
+        {
+            let ts = chrono::Utc::now().format("%H:%M:%S%.3f");
+            let _ = writeln!(f, "[{ts}] {msg}");
+        }
+    }
+}
+
 /// Releases the `payment_active` reservation on drop, on every return path.
 struct ActiveGuard<'a>(&'a std::sync::atomic::AtomicBool);
 impl Drop for ActiveGuard<'_> {
@@ -93,10 +109,13 @@ pub async fn start_payment(
     let sale_id = uuid::Uuid::new_v4().to_string();
     let session_started = chrono::Utc::now().timestamp();
 
+    dlog(&app, &format!("start_payment: total={total} qty={qty_total} sale={sale_id}"));
+
     // 1) Money-safety anchor: a pending row exists before any cash is taken.
     state
         .db
         .create_pending_sale(&sale_id, session_started, total, qty_total)?;
+    dlog(&app, "pending sale created");
 
     // 2) Run the session; persist the inserted total on every credit.
     let cfg = crate::config::nv9_cfg(&settings);
@@ -117,10 +136,20 @@ pub async fn start_payment(
     *state.payment.lock() = Some(handle);
 
     // 3) Wait off the webview thread so progress events + cancel keep flowing.
+    dlog(&app, "waiting for session end");
     let end = tauri::async_runtime::spawn_blocking(move || rx.recv())
         .await
         .map_err(|_| KioskError::Other("plaćanje prekinuto".into()))?
         .map_err(|_| KioskError::Other("plaćanje prekinuto".into()))?;
+    dlog(
+        &app,
+        match &end {
+            PaymentEnd::Paid(v) => format!("session end: Paid({v})"),
+            PaymentEnd::Cancelled(v) => format!("session end: Cancelled({v})"),
+            PaymentEnd::Failed(e, v) => format!("session end: Failed({e}, {v})"),
+        }
+        .as_str(),
+    );
 
     // Take the handle out, then reap its threads in the BACKGROUND so the response — and
     // the frontend switch to the printing screen — never waits on validator/coordinator
@@ -134,13 +163,16 @@ pub async fn start_payment(
             // Mint tickets at completion (correct issue time), then finalize atomically.
             let issued_at = chrono::Utc::now().timestamp();
             let tickets = mint_tickets(&settings, &cart, &state.secret, issued_at);
+            dlog(&app, &format!("finalizing paid: {} tickets", tickets.len()));
             if let Err(e) = db.finalize_paid(&sale_id, inserted, &tickets) {
                 // Money is in the box — never drop it. Journal the paid sale for recovery.
+                dlog(&app, &format!("finalize FAILED: {e}"));
                 write_recovery(&app, &sale_id, inserted, total, &tickets, &e);
                 return Err(KioskError::Other(format!(
                     "naplaćeno {inserted} RSD, ali upis karata nije uspeo: {e}. Sačuvano u recovery — pozovite osoblje."
                 )));
             }
+            dlog(&app, "finalized OK — returning outcome");
             Ok(PaymentOutcome {
                 sale_id,
                 inserted_rsd: inserted,

@@ -179,9 +179,12 @@ pub fn start(
         }
         // Tear down the driver, then resolve exactly once. EVERY exit path reaches here,
         // so on_done can never be left unresolved (that would hang start_payment).
+        crate::commands::dlog(&app, "coordinator: loop ended, resolving session");
         coordinator_stop.store(true, Ordering::SeqCst);
         finish_once(&coordinator_on_done, end);
+        crate::commands::dlog(&app, "coordinator: session resolved (on_done fired)");
         let _ = validator.join();
+        crate::commands::dlog(&app, "coordinator: validator thread joined");
     });
 
     PaymentHandle {

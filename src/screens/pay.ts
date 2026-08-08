@@ -49,6 +49,15 @@ export function mountPay(container: HTMLElement): ScreenController {
       // the printing screen. Show it so the pay screen never looks stuck at "full".
       statusEl.textContent = "Plaćanje uspešno — priprema računa...";
       statusEl.classList.remove("pay-status-warn");
+      // Watchdog: if the command response doesn't arrive shortly, say so explicitly —
+      // that distinguishes "backend hung" from "frontend missed the response".
+      window.setTimeout(() => {
+        if (!settled) {
+          statusEl.textContent =
+            "Backend ne odgovara posle uplate — pogledajte debug.log (admin).";
+          statusEl.classList.add("pay-status-warn");
+        }
+      }, 8000);
       return;
     }
     if (p.note) {
