@@ -1,4 +1,4 @@
-# Kiosk za naplatu ulaznica — Muzej Milene Marić
+# Kiosk za naplatu ulaznica — Muzej Mileve Marić
 
 Design + worker contract. Date: 2026-08-07.
 

@@ -1,7 +1,7 @@
 [package]
 name = "kiosk-naplata"
 version = "1.0.0"
-description = "Kiosk za naplatu ulaznica - Muzej Milene Maric"
+description = "Kiosk za naplatu ulaznica - Muzej Mileve Maric"
 authors = ["Milos"]
 edition = "2021"
 rust-version = "1.77"

@@ -8,7 +8,7 @@ export interface ScreenController {
 export function mountWelcome(container: HTMLElement): ScreenController {
   container.innerHTML = `
     <div class="screen screen-welcome">
-      <h1 class="title title-huge">Dobrodošli u Muzej Milene Marić</h1>
+      <h1 class="title title-huge">Dobrodošli u Muzej Mileve Marić</h1>
       <p class="subtitle">
         Dodirnite dugme ispod da kupite ulaznice za posetu muzeju.
       </p>

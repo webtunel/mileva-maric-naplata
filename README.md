@@ -1,4 +1,4 @@
-# Kiosk za naplatu ulaznica — Muzej Milene Marić
+# Kiosk za naplatu ulaznica — Muzej Mileve Marić
 
 Samostalni kiosk (Tauri v2, Windows) koji prodaje muzejske karte za gotovinu,
 naplaćuje preko **NV9 bank note validatora (SSP)**, štampa ulaznice sa

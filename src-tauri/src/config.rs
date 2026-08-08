@@ -31,6 +31,14 @@ pub fn bootstrap(db: &crate::db::Db) -> KioskResult<Vec<u8>> {
         db.set_secret("admin_pin", DEFAULT_ADMIN_PIN.as_bytes())?;
     }
 
+    // One-off correction of an earlier misspelling ("Milene" -> "Mileve") of the museum
+    // name in already-stored settings, so existing installs pick up the fix on next launch.
+    let mut settings = db.load_settings()?;
+    if settings.museum_name.contains("Milene") {
+        settings.museum_name = settings.museum_name.replace("Milene", "Mileve");
+        db.save_settings(&settings)?;
+    }
+
     Ok(raw)
 }
 

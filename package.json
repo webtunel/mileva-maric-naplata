@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Kiosk za naplatu ulaznica - Muzej Milene Maric (Tauri v2, Windows kiosk)",
+  "description": "Kiosk za naplatu ulaznica - Muzej Mileve Maric (Tauri v2, Windows kiosk)",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

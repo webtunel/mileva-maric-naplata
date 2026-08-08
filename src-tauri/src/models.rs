@@ -143,7 +143,7 @@ impl Default for Settings {
                 TicketType { code: "studenti".into(), label: "Studenti".into(), price_rsd: 300 },
             ],
             max_total_tickets: 10,
-            museum_name: "Muzej Milene Marić".into(),
+            museum_name: "Muzej Mileve Marić".into(),
             nv9_port: Some("COM3".into()),
             printer_vendor_id: None,
             printer_product_id: None,
