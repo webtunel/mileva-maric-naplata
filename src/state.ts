@@ -58,9 +58,29 @@ export function getState(): AppState {
   return state;
 }
 
+// Reentrancy guard: screen unmount handlers call setState from INSIDE a render pass
+// (e.g. pay.ts clears paymentActive on unmount). Recursing into the listeners there
+// caused an infinite render loop → JS stack overflow → the app froze right after
+// payment. Instead, nested setState calls just mark the state dirty and the outer
+// notification loop re-runs once.
+let notifying = false;
+let dirty = false;
+
 export function setState(patch: Partial<AppState>): void {
   Object.assign(state, patch);
-  for (const l of listeners) l(state);
+  if (notifying) {
+    dirty = true;
+    return;
+  }
+  notifying = true;
+  try {
+    do {
+      dirty = false;
+      for (const l of listeners) l(state);
+    } while (dirty);
+  } finally {
+    notifying = false;
+  }
 }
 
 /** Total number of tickets currently in the cart. */

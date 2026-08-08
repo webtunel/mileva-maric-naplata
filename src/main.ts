@@ -42,9 +42,13 @@ function render(state: AppState): void {
   if (!outlet) return;
 
   if (state.screen !== currentScreen) {
-    current?.unmount?.();
-    outlet.innerHTML = "";
+    // Commit the new screen BEFORE unmounting: unmount handlers may call setState,
+    // and a stale currentScreen would re-enter this branch (double unmount/mount).
     currentScreen = state.screen;
+    const previous = current;
+    current = null;
+    previous?.unmount?.();
+    outlet.innerHTML = "";
     current = mountScreen(state.screen, outlet);
   }
   current?.update?.(state);

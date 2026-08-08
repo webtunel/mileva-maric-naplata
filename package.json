@@ -1,7 +1,7 @@
 {
   "name": "kiosk-naplata-karata",
   "private": true,
-  "version": "1.0.15",
+  "version": "1.0.16",
   "type": "module",
   "description": "Kiosk za naplatu ulaznica - Muzej Mileve Maric (Tauri v2, Windows kiosk)",
   "scripts": {
