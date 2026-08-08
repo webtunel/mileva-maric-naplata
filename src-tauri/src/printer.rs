@@ -518,12 +518,12 @@ fn build_ticket_job(
         append_raster_qr(&mut job, ticket.qr_token.as_bytes())?;
     }
 
-    // Feed a generous tear-off margin before the partial cut so the paper never tears
-    // into the ticket content: ~6 text lines plus ~28mm of blank (ESC J 224 dots @203dpi).
-    // Total ~5cm clears the ~10-15mm cutter gap and leaves ~3cm of clean margin.
-    job.extend_from_slice(&[0x1b, 0x64, 0x06]); // ESC d 6  (feed 6 lines)
-    job.extend_from_slice(&[0x1b, 0x4a, 0xe0]); // ESC J 224 (~28mm precise feed)
-    job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1   (partial cut)
+    // Feed ~6 lines to clear the cutter gap so the blade lands just below the content,
+    // cut, then feed ~28mm of BLANK paper after the cut (no cut) so a clean 2-3cm lead
+    // sticks out of the printer, ready for the next ticket and easy to grab.
+    job.extend_from_slice(&[0x1b, 0x64, 0x06]); // ESC d 6   (feed 6 lines, clear cutter)
+    job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1    (partial cut)
+    job.extend_from_slice(&[0x1b, 0x4a, 0xe0]); // ESC J 224 (~28mm blank lead AFTER cut)
     Ok(job)
 }
 
