@@ -72,7 +72,7 @@ pub enum PaymentEvent {
     Disconnected,
     /// A note is held in escrow. The orchestrator decides accept vs reject
     /// (reject when accepting would exceed the amount owed — no-change model).
-    NoteInEscrow { value_rsd: i64 },
+    NoteInEscrow { value_rsd: i64, channel: u8 },
     /// A note was stacked; `value_rsd` credited. `total_inserted_rsd` is the new session total.
     Credited { value_rsd: i64, total_inserted_rsd: i64 },
     /// A note was returned to the visitor (rejected / would overpay).

@@ -124,7 +124,7 @@ pub fn start(
                 PaymentEvent::Notice { message } => {
                     emit_progress(&app, inserted, total_rsd, false, Some(message))
                 }
-                PaymentEvent::NoteInEscrow { value_rsd } => {
+                PaymentEvent::NoteInEscrow { value_rsd, channel } => {
                     last_activity = Instant::now();
                     // Accept every note, even one larger than the amount owed. No change is
                     // dispensed (NV9 cannot), so any overpayment is simply kept. Only reject
@@ -134,12 +134,13 @@ pub fn start(
                     } else {
                         EscrowDecision::Accept
                     };
+                    // Show the recognized value AND the NV9 channel, for diagnostics.
                     emit_progress(
                         &app,
                         inserted,
                         total_rsd,
                         false,
-                        Some(format!("Prepoznato {value_rsd} RSD")),
+                        Some(format!("Prepoznato {value_rsd} RSD (kanal {channel})")),
                     );
                     let _ = coordinator_decisions.send(decision);
                 }

@@ -542,7 +542,7 @@ fn process_poll(
                 }
 
                 state.escrow_value = Some(value);
-                emit(events, PaymentEvent::NoteInEscrow { value_rsd: value })?;
+                emit(events, PaymentEvent::NoteInEscrow { value_rsd: value, channel })?;
                 match wait_for_decision(decisions, stop)? {
                     DecisionWait::Accept => {
                         // NV9 proceeds from escrow to stacking; credit only on
@@ -903,7 +903,7 @@ pub fn run_simulator(
 
         let value = DENOMINATIONS[denomination_index];
         denomination_index = (denomination_index + 1) % DENOMINATIONS.len();
-        emit(&events, PaymentEvent::NoteInEscrow { value_rsd: value })?;
+        emit(&events, PaymentEvent::NoteInEscrow { value_rsd: value, channel: 0 })?;
 
         match wait_for_decision(&decisions, &stop)? {
             DecisionWait::Accept => {
