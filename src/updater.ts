@@ -1,6 +1,6 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { getState, Screen } from "./state";
+import { getState } from "./state";
 
 // Kiosk auto-update: silently check GitHub Releases for a newer *signed* build, install
 // it, then relaunch. Failures (offline, no endpoint, plain browser) are ignored so the
@@ -9,9 +9,10 @@ async function applyUpdateIfAny(force: boolean): Promise<void> {
   try {
     const update = await check();
     if (!update) return;
-    // Never interrupt a transaction: only update at startup (force) or while idle on the
-    // welcome screen. In simple/other screens, the update applies on the next restart.
-    if (!force && getState().screen !== Screen.Welcome) return;
+    // Never interrupt a transaction with cash already in: install at startup (force) or
+    // whenever no money is currently inserted (idle between customers, both modes).
+    const s = getState();
+    if (!force && s.paymentActive && s.paymentInserted > 0) return;
     await update.downloadAndInstall();
     await relaunch();
   } catch (err) {

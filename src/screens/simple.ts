@@ -1,4 +1,4 @@
-import { getState, escapeHtml, type AppState } from "../state";
+import { getState, setState, escapeHtml, type AppState } from "../state";
 import { startPayment, printTickets, onPaymentProgress } from "../api";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ScreenController } from "./welcome";
@@ -38,6 +38,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
 
   onPaymentProgress((p) => {
     if (stopped) return;
+    setState({ paymentInserted: p.inserted_rsd });
     insertedEl.textContent = `${p.inserted_rsd} RSD`;
     const pct = p.total_rsd > 0 ? Math.min(100, (p.inserted_rsd / p.total_rsd) * 100) : 0;
     barEl.style.width = `${pct}%`;
@@ -66,6 +67,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
 
   async function runOnce(): Promise<void> {
     if (stopped || price <= 0 || !adult) return;
+    setState({ paymentActive: true, paymentInserted: 0 });
     try {
       const outcome = await startPayment({ lines: [{ code: adult.code, qty: 1 }] });
       if (stopped) return;
@@ -76,6 +78,8 @@ export function mountSimple(container: HTMLElement): ScreenController {
       } catch (err) {
         statusEl.textContent = `Karta plaćena, štampa nije uspela: ${String(err)}`;
       }
+      // Transaction fully handled — safe for a pending update to install now.
+      setState({ paymentActive: false, paymentInserted: 0 });
       // Count down for the next customer, then auto-start a fresh session.
       let n = 5;
       statusEl.textContent = `Uzmite kartu. Sledeći kupac za ${n}s...`;
@@ -95,6 +99,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
       }, 1000);
     } catch {
       // cancel / timeout / hardware error — reset and keep waiting
+      setState({ paymentActive: false, paymentInserted: 0 });
       resetLine("Ubacite novac...");
       window.setTimeout(() => {
         if (!stopped) void runOnce();
@@ -112,6 +117,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
     update(_state: AppState): void {},
     unmount(): void {
       stopped = true;
+      setState({ paymentActive: false, paymentInserted: 0 });
       window.clearInterval(countdownTimer);
       unlisten?.();
     },

@@ -22,6 +22,7 @@ export interface AppState {
   tickets: PrintedTicket[];
   paymentTotal: number;
   paymentInserted: number;
+  paymentActive: boolean;
   toast: string | null;
 }
 
@@ -35,6 +36,7 @@ const state: AppState = {
   tickets: [],
   paymentTotal: 0,
   paymentInserted: 0,
+  paymentActive: false,
   toast: null,
 };
 

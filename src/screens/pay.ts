@@ -39,7 +39,7 @@ export function mountPay(container: HTMLElement): ScreenController {
   const initial = getState();
   const totalAmount = total(initial.cart, initial.config);
   const cart = toApiCart(initial.cart);
-  setState({ paymentTotal: totalAmount, paymentInserted: 0 });
+  setState({ paymentTotal: totalAmount, paymentInserted: 0, paymentActive: true });
 
   onPaymentProgress((p) => {
     if (settled) return;
@@ -105,6 +105,7 @@ export function mountPay(container: HTMLElement): ScreenController {
     update,
     unmount(): void {
       settled = true;
+      setState({ paymentActive: false, paymentInserted: 0 });
       unlisten?.();
       cancelLink.removeEventListener("click", onCancel);
     },

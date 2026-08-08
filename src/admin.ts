@@ -23,6 +23,7 @@ import {
   type ZReport,
 } from "./api";
 import { escapeHtml } from "./state";
+import { getVersion } from "@tauri-apps/api/app";
 
 const TAP_WINDOW_MS = 2000;
 const TAPS_REQUIRED = 5;
@@ -333,7 +334,9 @@ async function renderDevices(el: HTMLElement): Promise<void> {
     el.innerHTML = `<p class="admin-error">Greška: ${escapeHtml(String(err))}</p>`;
     return;
   }
+  const version = await getVersion().catch(() => "?");
   el.innerHTML = `
+    <div class="cfg-hint">Verzija aplikacije: <b>${escapeHtml(version)}</b></div>
     <div class="device-row">
       <span class="device-dot ${status.validator_connected ? "device-ok" : "device-bad"}"></span>
       <div>
