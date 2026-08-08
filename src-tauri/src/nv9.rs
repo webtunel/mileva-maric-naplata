@@ -289,19 +289,16 @@ fn parse_setup_response(response: &[u8]) -> KioskResult<SetupData> {
         )));
     }
 
-    let protocol_version = response
-        .get(real_multiplier_start + 3)
-        .copied()
-        .unwrap_or(0);
-
-    // Protocol version >= 6 carries the REAL per-channel denominations in an expanded
-    // block that follows [real_multiplier(3) | protocol(1)]:
+    // The REAL per-channel denominations live in an expanded block that follows
+    // [real_multiplier(3) | protocol(1)]:
     //   [3*n per-channel country codes] then [4-byte little-endian value per channel].
     // On a Serbian-dinar unit these are 10/20/50/100/200/500/1000/2000/5000. The base
-    // channel_values are only indices (1..n) scaled by a coarse multiplier, so whenever
-    // the expanded block is present we MUST use it — verified against a real NV9 dump.
+    // channel_values are only indices (1..n) scaled by a coarse multiplier (which read a
+    // 1000 note as 700 = 7*100). Whenever the expanded block is present (response long
+    // enough) we MUST use it — do NOT gate on the protocol-version byte, since without
+    // negotiating protocol 6 the unit can report a lower version yet still append the block.
     let expanded_start = real_multiplier_start + 4 + 3 * channel_count;
-    if protocol_version >= 6 && response.len() >= expanded_start + 4 * channel_count {
+    if response.len() >= expanded_start + 4 * channel_count {
         let mut channel_values = Vec::with_capacity(channel_count);
         for i in 0..channel_count {
             let off = expanded_start + 4 * i;
