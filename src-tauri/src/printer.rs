@@ -521,10 +521,14 @@ fn build_ticket_job(
     // Feed ~6 lines to clear the cutter gap so the blade lands just below the content,
     // cut, then feed ~28mm of BLANK paper after the cut (no cut) so a clean 2-3cm lead
     // sticks out of the printer, ready for the next ticket and easy to grab.
-    job.extend_from_slice(&[0x1b, 0x64, 0x06]); // ESC d 6   (feed 6 lines, clear cutter)
-    job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1    (partial cut)
-    // ~5cm of blank paper AFTER the cut (no cut) as a leftover tail for the next ticket.
-    // ESC J maxes at 255 dots (~32mm) per call, so feed twice (2 x 200 dots ≈ 50mm).
+    // 1) Feed the content well PAST the cutter before cutting so the blade lands cleanly
+    //    below the ticket (never into it): ~6 lines + ~25mm ≈ 49mm.
+    job.extend_from_slice(&[0x1b, 0x64, 0x06]); // ESC d 6   (~24mm)
+    job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
+    // 2) Partial cut — separates the finished ticket from the roll.
+    job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1
+    // 3) Feed ~5cm of blank tail AFTER the cut (no cut). Stays on the printer side as a
+    //    leftover lead for the next ticket. ESC J caps ~32mm/call, so feed twice.
     job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
     job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
     Ok(job)
