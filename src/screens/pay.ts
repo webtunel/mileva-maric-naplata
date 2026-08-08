@@ -44,6 +44,13 @@ export function mountPay(container: HTMLElement): ScreenController {
   onPaymentProgress((p) => {
     if (settled) return;
     setState({ paymentInserted: p.inserted_rsd, paymentTotal: p.total_rsd });
+    if (p.complete) {
+      // Enough money in — the backend is finishing the sale and we're about to switch to
+      // the printing screen. Show it so the pay screen never looks stuck at "full".
+      statusEl.textContent = "Plaćanje uspešno — priprema računa...";
+      statusEl.classList.remove("pay-status-warn");
+      return;
+    }
     if (p.note) {
       const returned = /vraćena|kusur|apoen/i.test(p.note);
       returnedStreak = returned ? returnedStreak + 1 : 0;
