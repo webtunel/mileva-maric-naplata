@@ -523,7 +523,10 @@ fn build_ticket_job(
     // sticks out of the printer, ready for the next ticket and easy to grab.
     job.extend_from_slice(&[0x1b, 0x64, 0x06]); // ESC d 6   (feed 6 lines, clear cutter)
     job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1    (partial cut)
-    job.extend_from_slice(&[0x1b, 0x4a, 0xe0]); // ESC J 224 (~28mm blank lead AFTER cut)
+    // ~5cm of blank paper AFTER the cut (no cut) as a leftover tail for the next ticket.
+    // ESC J maxes at 255 dots (~32mm) per call, so feed twice (2 x 200 dots ≈ 50mm).
+    job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
+    job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
     Ok(job)
 }
 
