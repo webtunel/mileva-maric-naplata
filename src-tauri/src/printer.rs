@@ -525,9 +525,10 @@ fn build_ticket_job(
     let mut job = Vec::new();
     job.extend_from_slice(&[0x1b, 0x40]); // ESC @  (init)
     job.extend_from_slice(&[0x1b, 0x74, 0x12]); // ESC t 18 (CP852 code page)
-    // GS W — set print area width in dots so centered text/QR align to the loaded paper.
-    let width_dots: u16 = if width_mm <= 58 { 384 } else { 576 };
-    let [wl, wh] = width_dots.to_le_bytes();
+    // GS W — set print area width in dots (~8 dots/mm minus ~10mm total margins) so
+    // centered text/QR align to ANY loaded paper, including rolls narrower than 58mm.
+    let printable_dots = width_mm.saturating_sub(10).saturating_mul(8).clamp(160, 576);
+    let [wl, wh] = (printable_dots as u16).to_le_bytes();
     job.extend_from_slice(&[0x1d, 0x57, wl, wh]);
     job.extend_from_slice(&[0x1b, 0x61, 0x01]); // ESC a 1 (center)
     // Museum name emphasis: on 80mm double both; on 58mm double HEIGHT only (0x01) so the
@@ -545,8 +546,14 @@ fn build_ticket_job(
     append_text_line(&mut job, &format!("#{}", short_code.to_uppercase()));
     job.push(b'\n');
 
-    // Smaller QR module on narrow paper so the code fits the 58mm print area.
-    let qr_module: u8 = if width_mm <= 58 { 0x05 } else { 0x06 };
+    // Smaller QR module on narrower paper so the code fits the print area.
+    let qr_module: u8 = if width_mm <= 44 {
+        0x04
+    } else if width_mm <= 58 {
+        0x05
+    } else {
+        0x06
+    };
     if USE_NATIVE_QR {
         append_native_qr(&mut job, ticket.qr_token.as_bytes(), qr_module)?;
     } else {

@@ -158,8 +158,8 @@ impl Default for Settings {
             printer_port: None,
             printer_windows_name: Some("BIXOLON SRP-Q300".into()),
             simple_mode: false,
-            feed_before_cut_mm: 100,
-            feed_after_cut_mm: 100,
+            feed_before_cut_mm: 60,
+            feed_after_cut_mm: 60,
             paper_width_mm: 80,
         }
     }

@@ -234,7 +234,11 @@ pub async fn admin_set_devices(
     settings.printer_windows_name = normalize_port(printer_windows_name);
     settings.feed_before_cut_mm = feed_before_mm.min(200);
     settings.feed_after_cut_mm = feed_after_mm.min(200);
-    settings.paper_width_mm = if paper_width_mm == 0 { 80 } else { paper_width_mm.min(120) };
+    settings.paper_width_mm = if paper_width_mm == 0 {
+        80
+    } else {
+        paper_width_mm.clamp(28, 120)
+    };
     state.db.save_settings(&settings)?;
     Ok(())
 }
