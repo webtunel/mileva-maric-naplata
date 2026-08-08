@@ -45,6 +45,9 @@ parking_lot = "0.12"
 crossbeam-channel = "0.5"
 log = "0.4"
 
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
+
 [features]
 # When a device is absent (dev on macOS), the simulator feeds fake NV9 events.
 simulate = []

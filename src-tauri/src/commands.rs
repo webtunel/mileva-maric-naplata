@@ -24,7 +24,7 @@ fn non_empty(value: Option<String>) -> Option<String> {
 
 /// Append a timestamped line to app_data/debug.log — payment-flow diagnostics for the
 /// deployed kiosk (no console there). Best effort; never fails the caller.
-pub fn dlog(app: &tauri::AppHandle, msg: &str) {
+pub fn dlog<R: tauri::Runtime>(app: &tauri::AppHandle<R>, msg: &str) {
     if let Ok(dir) = app.path().app_data_dir() {
         let _ = std::fs::create_dir_all(&dir);
         if let Ok(mut f) = std::fs::OpenOptions::new()

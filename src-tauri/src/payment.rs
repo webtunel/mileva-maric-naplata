@@ -39,8 +39,8 @@ pub struct PaymentHandle {
     coordinator: Mutex<Option<JoinHandle<()>>>,
 }
 
-pub fn start(
-    app: tauri::AppHandle,
+pub fn start<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     cfg: Nv9Config,
     total_rsd: i64,
     on_credit: impl Fn(i64) + Send + 'static,
@@ -226,8 +226,52 @@ fn finish_once(callback: &Mutex<Option<DoneCallback>>, end: PaymentEnd) {
     }
 }
 
-fn emit_progress(
-    app: &tauri::AppHandle,
+#[cfg(all(test, feature = "simulate"))]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    /// End-to-end repro of the deployed flow: simulator feeds notes (100,200,500,... every
+    /// 2s), orchestrator accepts, and the session MUST resolve Paid once inserted >= total
+    /// — i.e. the exact handoff that the kiosk reports as stuck after "priprema računa".
+    #[test]
+    fn simulated_session_resolves_paid() {
+        let app = tauri::test::mock_app();
+        let cfg = Nv9Config {
+            port: "SIM".into(),
+            baud: 9600,
+        };
+        let (tx, rx) = std::sync::mpsc::channel();
+        let credits = std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0));
+        let credits_clone = credits.clone();
+        let handle = start(
+            app.handle().clone(),
+            cfg,
+            400,
+            move |inserted| {
+                credits_clone.store(inserted, std::sync::atomic::Ordering::SeqCst);
+            },
+            move |end| {
+                let _ = tx.send(end);
+            },
+        );
+
+        // 100 + 200 = 300, + 500 = 800 >= 400 → Paid(800) after ~3 notes (~7s).
+        let end = rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("payment session must resolve (this is the reported hang)");
+        match end {
+            PaymentEnd::Paid(v) => assert!(v >= 400, "paid at least the price, got {v}"),
+            PaymentEnd::Cancelled(v) => panic!("unexpected cancel with {v}"),
+            PaymentEnd::Failed(e, v) => panic!("unexpected failure {e} with {v}"),
+        }
+        assert!(credits.load(std::sync::atomic::Ordering::SeqCst) >= 400);
+        drop(handle); // must not deadlock on teardown either
+    }
+}
+
+fn emit_progress<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
     inserted_rsd: i64,
     total_rsd: i64,
     complete: bool,
