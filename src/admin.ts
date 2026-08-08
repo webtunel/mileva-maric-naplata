@@ -13,6 +13,7 @@ import {
   adminSetDevices,
   adminSetPrices,
   adminSetSimpleMode,
+  adminTestPrint,
   adminZReport,
   deviceStatus,
   type DeviceStatus,
@@ -360,6 +361,7 @@ async function renderDevices(el: HTMLElement): Promise<void> {
       </select></label>
       <div class="admin-actions">
         <button type="button" class="btn btn-primary" id="save-devices">Sačuvaj</button>
+        <button type="button" class="btn btn-ghost" id="test-print">Test štampa</button>
         <button type="button" class="btn btn-ghost" id="refresh-devices">Osveži status</button>
         <span class="admin-status" id="dev-status"></span>
       </div>
@@ -368,6 +370,15 @@ async function renderDevices(el: HTMLElement): Promise<void> {
   `;
   const devStatus = el.querySelector<HTMLElement>("#dev-status")!;
   el.querySelector<HTMLButtonElement>("#refresh-devices")!.addEventListener("click", () => void renderDevices(el));
+  el.querySelector<HTMLButtonElement>("#test-print")!.addEventListener("click", async () => {
+    devStatus.textContent = "Štampam test kartu...";
+    try {
+      await adminTestPrint();
+      devStatus.textContent = "Test karta poslata na štampač.";
+    } catch (err) {
+      devStatus.textContent = `Greška: ${String(err)}`;
+    }
+  });
   el.querySelector<HTMLButtonElement>("#save-devices")!.addEventListener("click", async () => {
     const nv9 = el.querySelector<HTMLInputElement>("#cfg-nv9")!.value;
     const printer = el.querySelector<HTMLInputElement>("#cfg-printer")!.value;

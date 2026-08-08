@@ -91,17 +91,45 @@ pub async fn admin_reprint(
         .get_sale(&sale_id)?
         .ok_or_else(|| KioskError::Other(format!("prodaja '{}' nije pronađena", sale_id)))?;
     let settings = state.settings.lock().clone();
-    let museum = settings.museum_name.clone();
-    let target = crate::printer::PrinterTarget {
-        vendor_id: settings.printer_vendor_id,
-        product_id: settings.printer_product_id,
+    print_via_settings(&settings, &settings.museum_name, &sale.tickets)?;
+    state.db.inc_reprint(&sale_id)?;
+    Ok(())
+}
+
+/// Prints a single fake ticket so staff can test the thermal printer from admin without a
+/// real sale. The QR carries a real signed test token, so layout/QR/cut/feed all match live.
+#[tauri::command]
+pub async fn admin_test_print(state: tauri::State<'_, AppState>) -> Result<(), KioskError> {
+    let settings = state.settings.lock().clone();
+    let now = chrono::Utc::now().timestamp();
+    let id = uuid::Uuid::new_v4().to_string();
+    let claims = crate::token::TicketClaims {
+        id: id.clone(),
+        type_code: "test".into(),
+        price_rsd: 0,
+        issued_at: now,
     };
+    let ticket = PrintedTicket {
+        qr_token: crate::token::sign(&state.secret, &claims),
+        id,
+        type_code: "test".into(),
+        label: "TEST KARTA".into(),
+        price_rsd: 0,
+        issued_at: now,
+    };
+    print_via_settings(&settings, &settings.museum_name, &[ticket])
+}
+
+/// Selects the print transport (Windows spooler > serial COM > raw USB) from settings and
+/// prints the given tickets with the configured feed/width. Shared by reprint + test print.
+fn print_via_settings(
+    settings: &Settings,
+    museum: &str,
+    tickets: &[PrintedTicket],
+) -> KioskResult<()> {
     let before = settings.feed_before_cut_mm;
     let after = settings.feed_after_cut_mm;
     let width = settings.paper_width_mm;
-    let tickets: &[PrintedTicket] = &sale.tickets;
-
-    // Same transport priority as a normal print: Windows spooler > serial COM > raw USB.
     let win = settings
         .printer_windows_name
         .as_deref()
@@ -111,14 +139,16 @@ pub async fn admin_reprint(
         .as_deref()
         .filter(|s| !s.trim().is_empty());
     if let Some(name) = win {
-        crate::printer::print_tickets_windows(name, &museum, tickets, before, after, width)?;
+        crate::printer::print_tickets_windows(name, museum, tickets, before, after, width)
     } else if let Some(p) = port {
-        crate::printer::print_tickets_serial(p, &museum, tickets, before, after, width)?;
+        crate::printer::print_tickets_serial(p, museum, tickets, before, after, width)
     } else {
-        crate::printer::print_tickets(&target, &museum, tickets, before, after, width)?;
+        let target = crate::printer::PrinterTarget {
+            vendor_id: settings.printer_vendor_id,
+            product_id: settings.printer_product_id,
+        };
+        crate::printer::print_tickets(&target, museum, tickets, before, after, width)
     }
-    state.db.inc_reprint(&sale_id)?;
-    Ok(())
 }
 
 #[tauri::command]

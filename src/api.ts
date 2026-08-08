@@ -183,3 +183,8 @@ export function adminSetDevices(
 export function adminSetSimpleMode(enabled: boolean): Promise<void> {
   return invoke<void>("admin_set_simple_mode", { enabled });
 }
+
+/** Prints a fake test ticket to check the thermal printer. */
+export function adminTestPrint(): Promise<void> {
+  return invoke<void>("admin_test_print");
+}
