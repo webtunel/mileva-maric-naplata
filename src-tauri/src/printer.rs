@@ -529,9 +529,12 @@ fn build_ticket_job(
     let width_dots: u16 = if width_mm <= 58 { 384 } else { 576 };
     let [wl, wh] = width_dots.to_le_bytes();
     job.extend_from_slice(&[0x1d, 0x57, wl, wh]);
-    job.extend_from_slice(&[0x1b, 0x61, 0x01]);
-    job.extend_from_slice(&[0x1d, 0x21, 0x11]);
-    job.extend_from_slice(&[0x1b, 0x45, 0x01]);
+    job.extend_from_slice(&[0x1b, 0x61, 0x01]); // ESC a 1 (center)
+    // Museum name emphasis: on 80mm double both; on 58mm double HEIGHT only (0x01) so the
+    // wider name still fits the narrow paper instead of wrapping.
+    let museum_size = if width_mm <= 58 { 0x01 } else { 0x11 };
+    job.extend_from_slice(&[0x1d, 0x21, museum_size]); // GS ! size
+    job.extend_from_slice(&[0x1b, 0x45, 0x01]); // ESC E 1 (bold)
     append_text_line(&mut job, museum);
 
     job.extend_from_slice(&[0x1d, 0x21, 0x00]);
@@ -542,8 +545,10 @@ fn build_ticket_job(
     append_text_line(&mut job, &format!("#{}", short_code.to_uppercase()));
     job.push(b'\n');
 
+    // Smaller QR module on narrow paper so the code fits the 58mm print area.
+    let qr_module: u8 = if width_mm <= 58 { 0x05 } else { 0x06 };
     if USE_NATIVE_QR {
-        append_native_qr(&mut job, ticket.qr_token.as_bytes())?;
+        append_native_qr(&mut job, ticket.qr_token.as_bytes(), qr_module)?;
     } else {
         append_raster_qr(&mut job, ticket.qr_token.as_bytes())?;
     }
@@ -564,9 +569,9 @@ fn append_text_line(output: &mut Vec<u8>, text: &str) {
     output.push(b'\n');
 }
 
-fn append_native_qr(output: &mut Vec<u8>, data: &[u8]) -> crate::models::KioskResult<()> {
+fn append_native_qr(output: &mut Vec<u8>, data: &[u8], module: u8) -> crate::models::KioskResult<()> {
     append_gs_k(output, 0x31, 0x41, &[0x32, 0x00])?;
-    append_gs_k(output, 0x31, 0x43, &[0x06])?;
+    append_gs_k(output, 0x31, 0x43, &[module])?;
     append_gs_k(output, 0x31, 0x45, &[0x32])?;
 
     let store_capacity = data.len().checked_add(1).ok_or_else(|| {
