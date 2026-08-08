@@ -6,6 +6,7 @@ import { mountPay } from "./screens/pay";
 import { mountSuccess } from "./screens/success";
 import { mountSimple } from "./screens/simple";
 import { initAdmin } from "./admin";
+import { startAutoUpdate } from "./updater";
 
 let current: ScreenController | null = null;
 let currentScreen: Screen | null = null;
@@ -72,6 +73,8 @@ async function bootstrap(): Promise<void> {
   const hotzone = document.getElementById("admin-hotzone");
   const adminRoot = document.getElementById("admin-root");
   if (hotzone && adminRoot) initAdmin(hotzone, adminRoot);
+
+  startAutoUpdate();
 
   try {
     const config = await getConfig();

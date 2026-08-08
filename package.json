@@ -1,7 +1,7 @@
 {
   "name": "kiosk-naplata-karata",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Kiosk za naplatu ulaznica - Muzej Mileve Maric (Tauri v2, Windows kiosk)",
   "scripts": {
@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
-    "@tauri-apps/plugin-autostart": "^2.0.1"
+    "@tauri-apps/plugin-autostart": "^2.0.1",
+    "@tauri-apps/plugin-updater": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.0.0"
   }
 }

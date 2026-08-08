@@ -1,0 +1,46 @@
+name: release
+
+# Publishes a signed Windows release + updater manifest (latest.json) to GitHub Releases.
+# The kiosk's built-in auto-updater points at this release's latest.json, so pushing a
+# version tag ships an automatic update to every installed kiosk.
+#
+# To cut a release: bump version in package.json + src-tauri/{Cargo.toml,tauri.conf.json},
+# commit, then: git tag v1.0.2 && git push origin v1.0.2
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Kiosk ${{ github.ref_name }}"
+          releaseBody: "Automatska nadogradnja kioska."
+          releaseDraft: false
+          prerelease: false
