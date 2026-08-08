@@ -90,20 +90,33 @@ pub async fn admin_reprint(
         .db
         .get_sale(&sale_id)?
         .ok_or_else(|| KioskError::Other(format!("prodaja '{}' nije pronađena", sale_id)))?;
-    let (vendor_id, product_id, museum_name) = {
-        let settings = state.settings.lock();
-        (
-            settings.printer_vendor_id,
-            settings.printer_product_id,
-            settings.museum_name.clone(),
-        )
-    };
+    let settings = state.settings.lock().clone();
+    let museum = settings.museum_name.clone();
     let target = crate::printer::PrinterTarget {
-        vendor_id,
-        product_id,
+        vendor_id: settings.printer_vendor_id,
+        product_id: settings.printer_product_id,
     };
+    let before = settings.feed_before_cut_mm;
+    let after = settings.feed_after_cut_mm;
+    let width = settings.paper_width_mm;
     let tickets: &[PrintedTicket] = &sale.tickets;
-    crate::printer::print_tickets(&target, &museum_name, tickets)?;
+
+    // Same transport priority as a normal print: Windows spooler > serial COM > raw USB.
+    let win = settings
+        .printer_windows_name
+        .as_deref()
+        .filter(|s| !s.trim().is_empty());
+    let port = settings
+        .printer_port
+        .as_deref()
+        .filter(|s| !s.trim().is_empty());
+    if let Some(name) = win {
+        crate::printer::print_tickets_windows(name, &museum, tickets, before, after, width)?;
+    } else if let Some(p) = port {
+        crate::printer::print_tickets_serial(p, &museum, tickets, before, after, width)?;
+    } else {
+        crate::printer::print_tickets(&target, &museum, tickets, before, after, width)?;
+    }
     state.db.inc_reprint(&sale_id)?;
     Ok(())
 }
@@ -181,11 +194,17 @@ pub async fn admin_set_devices(
     nv9_port: Option<String>,
     printer_port: Option<String>,
     printer_windows_name: Option<String>,
+    feed_before_mm: u32,
+    feed_after_mm: u32,
+    paper_width_mm: u32,
 ) -> Result<(), KioskError> {
     let mut settings = state.settings.lock();
     settings.nv9_port = normalize_port(nv9_port);
     settings.printer_port = normalize_port(printer_port);
     settings.printer_windows_name = normalize_port(printer_windows_name);
+    settings.feed_before_cut_mm = feed_before_mm.min(200);
+    settings.feed_after_cut_mm = feed_after_mm.min(200);
+    settings.paper_width_mm = if paper_width_mm == 0 { 80 } else { paper_width_mm.min(120) };
     state.db.save_settings(&settings)?;
     Ok(())
 }

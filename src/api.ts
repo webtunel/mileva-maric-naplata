@@ -74,6 +74,9 @@ export interface Settings {
   printer_port: string | null;
   printer_windows_name: string | null;
   simple_mode: boolean;
+  feed_before_cut_mm: number;
+  feed_after_cut_mm: number;
+  paper_width_mm: number;
 }
 
 export interface ZReport {
@@ -157,13 +160,23 @@ export function adminExit(pin: string): Promise<void> {
   return invoke<void>("admin_exit", { pin });
 }
 
-/** Sets device ports + Windows printer name. Empty string -> null (auto/USB). */
+/** Sets device ports + Windows printer name + print feed/width. Empty string -> null. */
 export function adminSetDevices(
   nv9Port: string,
   printerPort: string,
-  printerWindowsName: string
+  printerWindowsName: string,
+  feedBeforeMm: number,
+  feedAfterMm: number,
+  paperWidthMm: number
 ): Promise<void> {
-  return invoke<void>("admin_set_devices", { nv9Port, printerPort, printerWindowsName });
+  return invoke<void>("admin_set_devices", {
+    nv9Port,
+    printerPort,
+    printerWindowsName,
+    feedBeforeMm,
+    feedAfterMm,
+    paperWidthMm,
+  });
 }
 
 /** Toggles the touchless single-adult-ticket simple mode. */

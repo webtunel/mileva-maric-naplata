@@ -352,6 +352,12 @@ async function renderDevices(el: HTMLElement): Promise<void> {
       <label>Printer — Windows ime (najpouzdanije; prazno = koristi COM/USB)<input type="text" id="cfg-win" class="admin-input" placeholder="BIXOLON SRP-Q300" value="${escapeHtml(settings.printer_windows_name ?? "")}" /></label>
       <label>Printer COM port (koristi se ako je Windows ime prazno)<input type="text" id="cfg-printer" class="admin-input" placeholder="COM4" value="${escapeHtml(settings.printer_port ?? "")}" /></label>
       <label class="cfg-check"><input type="checkbox" id="cfg-simple" ${settings.simple_mode ? "checked" : ""} /> Jednostavni režim (bez touch-a — uvek karta za odrasle)</label>
+      <label>Feed pre reza (mm)<input type="number" id="cfg-fb" class="admin-input" min="0" max="200" value="${settings.feed_before_cut_mm}" /></label>
+      <label>Feed posle reza / rep (mm)<input type="number" id="cfg-fa" class="admin-input" min="0" max="200" value="${settings.feed_after_cut_mm}" /></label>
+      <label>Širina papira<select id="cfg-pw" class="admin-input">
+        <option value="58" ${settings.paper_width_mm <= 58 ? "selected" : ""}>58 mm</option>
+        <option value="80" ${settings.paper_width_mm > 58 ? "selected" : ""}>80 mm</option>
+      </select></label>
       <div class="admin-actions">
         <button type="button" class="btn btn-primary" id="save-devices">Sačuvaj</button>
         <button type="button" class="btn btn-ghost" id="refresh-devices">Osveži status</button>
@@ -367,9 +373,12 @@ async function renderDevices(el: HTMLElement): Promise<void> {
     const printer = el.querySelector<HTMLInputElement>("#cfg-printer")!.value;
     const win = el.querySelector<HTMLInputElement>("#cfg-win")!.value;
     const simple = el.querySelector<HTMLInputElement>("#cfg-simple")!.checked;
+    const fb = Number(el.querySelector<HTMLInputElement>("#cfg-fb")!.value) || 0;
+    const fa = Number(el.querySelector<HTMLInputElement>("#cfg-fa")!.value) || 0;
+    const pw = Number(el.querySelector<HTMLSelectElement>("#cfg-pw")!.value) || 80;
     devStatus.textContent = "Čuvanje...";
     try {
-      await adminSetDevices(nv9, printer, win);
+      await adminSetDevices(nv9, printer, win, fb, fa, pw);
       await adminSetSimpleMode(simple);
       devStatus.textContent = "Sačuvano.";
     } catch (err) {

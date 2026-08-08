@@ -132,6 +132,14 @@ pub struct Settings {
     /// Simple mode: no touch. Always sells one adult ticket; when the exact
     /// price is inserted, the ticket prints automatically and the machine loops.
     pub simple_mode: bool,
+    /// Blank paper (mm) fed BEFORE the cut, so the blade clears the ticket content.
+    pub feed_before_cut_mm: u32,
+    /// Blank paper (mm) fed AFTER the cut (no cut) — the tail that sticks out for the
+    /// next ticket / how much more paper is pushed out when the ticket ejects.
+    pub feed_after_cut_mm: u32,
+    /// Paper width (mm), e.g. 58 or 80. Sets the ESC/POS print area so centering is
+    /// correct for the loaded roll.
+    pub paper_width_mm: u32,
 }
 
 impl Default for Settings {
@@ -150,6 +158,9 @@ impl Default for Settings {
             printer_port: None,
             printer_windows_name: Some("BIXOLON SRP-Q300".into()),
             simple_mode: false,
+            feed_before_cut_mm: 48,
+            feed_after_cut_mm: 50,
+            paper_width_mm: 80,
         }
     }
 }

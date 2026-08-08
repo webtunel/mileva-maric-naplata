@@ -48,11 +48,14 @@ pub fn print_tickets(
     target: &PrinterTarget,
     museum: &str,
     tickets: &[crate::models::PrintedTicket],
+    before_mm: u32,
+    after_mm: u32,
+    width_mm: u32,
 ) -> crate::models::KioskResult<()> {
     let printer = open_printer(target)?;
 
     for ticket in tickets {
-        let job = build_ticket_job(museum, ticket)?;
+        let job = build_ticket_job(museum, ticket, before_mm, after_mm, width_mm)?;
         write_bulk_all(&printer, &job)?;
     }
 
@@ -73,6 +76,9 @@ pub fn print_tickets_serial(
     port: &str,
     museum: &str,
     tickets: &[crate::models::PrintedTicket],
+    before_mm: u32,
+    after_mm: u32,
+    width_mm: u32,
 ) -> crate::models::KioskResult<()> {
     let mut serial = serialport::new(port, 9600)
         .timeout(std::time::Duration::from_secs(5))
@@ -81,7 +87,7 @@ pub fn print_tickets_serial(
             KioskError::Print(format!("ne mogu da otvorim printer port {port}: {error}"))
         })?;
     for ticket in tickets {
-        let job = build_ticket_job(museum, ticket)?;
+        let job = build_ticket_job(museum, ticket, before_mm, after_mm, width_mm)?;
         std::io::Write::write_all(&mut *serial, &job)
             .map_err(|error| KioskError::Print(format!("greška pri štampi na {port}: {error}")))?;
     }
@@ -133,10 +139,13 @@ pub fn print_tickets_windows(
     printer_name: &str,
     museum: &str,
     tickets: &[crate::models::PrintedTicket],
+    before_mm: u32,
+    after_mm: u32,
+    width_mm: u32,
 ) -> crate::models::KioskResult<()> {
     let mut bytes = Vec::new();
     for ticket in tickets {
-        bytes.extend_from_slice(&build_ticket_job(museum, ticket)?);
+        bytes.extend_from_slice(&build_ticket_job(museum, ticket, before_mm, after_mm, width_mm)?);
     }
     let mut name = wide(printer_name);
     let mut doc_name = wide("Ulaznica");
@@ -196,6 +205,9 @@ pub fn print_tickets_windows(
     _printer_name: &str,
     _museum: &str,
     _tickets: &[crate::models::PrintedTicket],
+    _before_mm: u32,
+    _after_mm: u32,
+    _width_mm: u32,
 ) -> crate::models::KioskResult<()> {
     Err(KioskError::Print(
         "Windows štampa je dostupna samo na Windows-u".into(),
@@ -480,9 +492,23 @@ fn write_bulk_all(printer: &OpenPrinter, data: &[u8]) -> crate::models::KioskRes
     Ok(())
 }
 
+/// Feed `mm` millimeters of blank paper via ESC J (n/203 inch, ~8 dots/mm at 203dpi).
+/// ESC J caps at 255 dots (~32mm) per call, so split larger feeds across several calls.
+fn append_feed(job: &mut Vec<u8>, mm: u32) {
+    let mut dots = mm.saturating_mul(8); // ~8 dots per mm at 203 dpi
+    while dots > 0 {
+        let chunk = dots.min(255) as u8;
+        job.extend_from_slice(&[0x1b, 0x4a, chunk]); // ESC J n
+        dots -= u32::from(chunk);
+    }
+}
+
 fn build_ticket_job(
     museum: &str,
     ticket: &crate::models::PrintedTicket,
+    before_mm: u32,
+    after_mm: u32,
+    width_mm: u32,
 ) -> crate::models::KioskResult<Vec<u8>> {
     let issued_at = Local
         .timestamp_opt(ticket.issued_at, 0)
@@ -497,8 +523,12 @@ fn build_ticket_job(
     let short_code: String = short_code_reversed.chars().rev().collect();
 
     let mut job = Vec::new();
-    job.extend_from_slice(&[0x1b, 0x40]);
-    job.extend_from_slice(&[0x1b, 0x74, 0x12]);
+    job.extend_from_slice(&[0x1b, 0x40]); // ESC @  (init)
+    job.extend_from_slice(&[0x1b, 0x74, 0x12]); // ESC t 18 (CP852 code page)
+    // GS W — set print area width in dots so centered text/QR align to the loaded paper.
+    let width_dots: u16 = if width_mm <= 58 { 384 } else { 576 };
+    let [wl, wh] = width_dots.to_le_bytes();
+    job.extend_from_slice(&[0x1d, 0x57, wl, wh]);
     job.extend_from_slice(&[0x1b, 0x61, 0x01]);
     job.extend_from_slice(&[0x1d, 0x21, 0x11]);
     job.extend_from_slice(&[0x1b, 0x45, 0x01]);
@@ -521,16 +551,11 @@ fn build_ticket_job(
     // Feed ~6 lines to clear the cutter gap so the blade lands just below the content,
     // cut, then feed ~28mm of BLANK paper after the cut (no cut) so a clean 2-3cm lead
     // sticks out of the printer, ready for the next ticket and easy to grab.
-    // 1) Feed the content well PAST the cutter before cutting so the blade lands cleanly
-    //    below the ticket (never into it): ~6 lines + ~25mm ≈ 49mm.
-    job.extend_from_slice(&[0x1b, 0x64, 0x06]); // ESC d 6   (~24mm)
-    job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
-    // 2) Partial cut — separates the finished ticket from the roll.
-    job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1
-    // 3) Feed ~5cm of blank tail AFTER the cut (no cut). Stays on the printer side as a
-    //    leftover lead for the next ticket. ESC J caps ~32mm/call, so feed twice.
-    job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
-    job.extend_from_slice(&[0x1b, 0x4a, 0xc8]); // ESC J 200 (~25mm)
+    // Feed the configurable blank margin (mm) so the blade clears the content, cut, then
+    // feed the configurable tail (mm) after the cut. Both are admin-adjustable.
+    append_feed(&mut job, before_mm);
+    job.extend_from_slice(&[0x1d, 0x56, 0x01]); // GS V 1 partial cut
+    append_feed(&mut job, after_mm);
     Ok(job)
 }
 

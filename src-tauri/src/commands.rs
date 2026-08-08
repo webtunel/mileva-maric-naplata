@@ -196,6 +196,9 @@ pub async fn print_tickets(
     let museum = settings.museum_name.clone();
     let printer_port = non_empty(settings.printer_port.clone());
     let windows_name = non_empty(settings.printer_windows_name.clone());
+    let feed_before = settings.feed_before_cut_mm;
+    let feed_after = settings.feed_after_cut_mm;
+    let paper_width = settings.paper_width_mm;
     let tickets = sale.tickets.clone();
 
     // Printer IO off the webview thread. Priority: Windows spooler (native driver) >
@@ -203,11 +206,11 @@ pub async fn print_tickets(
     let tickets_for_print = tickets.clone();
     tauri::async_runtime::spawn_blocking(move || {
         if let Some(name) = windows_name {
-            crate::printer::print_tickets_windows(&name, &museum, &tickets_for_print)
+            crate::printer::print_tickets_windows(&name, &museum, &tickets_for_print, feed_before, feed_after, paper_width)
         } else if let Some(port) = printer_port {
-            crate::printer::print_tickets_serial(&port, &museum, &tickets_for_print)
+            crate::printer::print_tickets_serial(&port, &museum, &tickets_for_print, feed_before, feed_after, paper_width)
         } else {
-            crate::printer::print_tickets(&target, &museum, &tickets_for_print)
+            crate::printer::print_tickets(&target, &museum, &tickets_for_print, feed_before, feed_after, paper_width)
         }
     })
     .await
