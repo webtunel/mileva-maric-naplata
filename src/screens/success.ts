@@ -2,7 +2,7 @@ import { getState, setState, resetTransaction, escapeHtml, type AppState } from 
 import { printTickets, type PrintedTicket } from "../api";
 import type { ScreenController } from "./welcome";
 
-const NEXT_CUSTOMER_SECONDS = 20;
+const NEXT_CUSTOMER_SECONDS = 5;
 
 function ticketCardHtml(t: PrintedTicket): string {
   const date = new Date(t.issued_at * 1000).toLocaleString("sr-RS");

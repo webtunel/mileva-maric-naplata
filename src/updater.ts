@@ -23,5 +23,5 @@ export function startAutoUpdate(): void {
   // App just launched — safe to update immediately (no transaction in progress).
   void applyUpdateIfAny(true);
   // Re-check periodically; installs only when idle.
-  window.setInterval(() => void applyUpdateIfAny(false), 30 * 60 * 1000);
+  window.setInterval(() => void applyUpdateIfAny(false), 5 * 60 * 1000);
 }

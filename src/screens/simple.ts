@@ -77,7 +77,7 @@ export function mountSimple(container: HTMLElement): ScreenController {
         statusEl.textContent = `Karta plaćena, štampa nije uspela: ${String(err)}`;
       }
       // Count down for the next customer, then auto-start a fresh session.
-      let n = 20;
+      let n = 5;
       statusEl.textContent = `Uzmite kartu. Sledeći kupac za ${n}s...`;
       countdownTimer = window.setInterval(() => {
         if (stopped) {
