@@ -1,6 +1,6 @@
 [package]
 name = "kiosk-naplata"
-version = "1.0.11"
+version = "1.0.12"
 description = "Kiosk za naplatu ulaznica - Muzej Mileve Maric"
 authors = ["Milos"]
 edition = "2021"

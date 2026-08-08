@@ -22,6 +22,7 @@ export function mountSuccess(container: HTMLElement): ScreenController {
     <div class="screen screen-success">
       <div class="success-check" aria-hidden="true">&#10003;</div>
       <h1 class="title">Uspešno! Uzmite kartu ispod.</h1>
+      <div class="success-paid" id="success-paid"></div>
       <div class="ticket-cards" id="ticket-cards"></div>
       <div class="pay-status" id="success-status">Štampam kartu...</div>
       <div class="success-actions" id="success-actions"></div>
@@ -83,8 +84,16 @@ export function mountSuccess(container: HTMLElement): ScreenController {
     }
   }
 
+  const paidEl = container.querySelector<HTMLElement>("#success-paid")!;
+
   function update(state: AppState): void {
     cardsEl.innerHTML = state.tickets.map(ticketCardHtml).join("");
+    if (state.lastInserted > 0) {
+      paidEl.textContent =
+        state.lastInserted > state.lastTotal
+          ? `Uplaćeno ${state.lastInserted} RSD (cena ${state.lastTotal} RSD — bez kusura)`
+          : `Uplaćeno ${state.lastInserted} RSD`;
+    }
   }
 
   update(getState());

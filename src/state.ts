@@ -23,6 +23,8 @@ export interface AppState {
   paymentTotal: number;
   paymentInserted: number;
   paymentActive: boolean;
+  lastInserted: number; // amount actually taken in the finished sale (for success screen)
+  lastTotal: number; // price of the finished sale
   toast: string | null;
 }
 
@@ -37,6 +39,8 @@ const state: AppState = {
   paymentTotal: 0,
   paymentInserted: 0,
   paymentActive: false,
+  lastInserted: 0,
+  lastTotal: 0,
   toast: null,
 };
 

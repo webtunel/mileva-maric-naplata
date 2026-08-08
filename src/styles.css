@@ -297,6 +297,12 @@ textarea {
   font-weight: 600;
 }
 
+.success-paid {
+  font-size: 20px;
+  color: var(--cream-dim);
+  margin: 0 0 12px;
+}
+
 .screen-simple {
   display: flex;
   flex-direction: column;

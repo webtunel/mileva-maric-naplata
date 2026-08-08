@@ -69,7 +69,13 @@ export function mountPay(container: HTMLElement): ScreenController {
       if (settled) return;
       settled = true;
       unlisten?.();
-      setState({ screen: Screen.Success, saleId: outcome.sale_id, tickets: [] });
+      setState({
+        screen: Screen.Success,
+        saleId: outcome.sale_id,
+        tickets: [],
+        lastInserted: outcome.inserted_rsd,
+        lastTotal: outcome.total_rsd,
+      });
     })
     .catch((err) => {
       if (settled) return;
