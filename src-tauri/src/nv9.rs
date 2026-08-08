@@ -331,7 +331,60 @@ fn parse_setup_response(response: &[u8]) -> KioskResult<SetupData> {
             .ok_or_else(|| hardware("NV9 channel denomination overflow"))?;
         channel_values.push(value);
     }
+
+    // Safety net: on this Serbian-dinar NV9 the coarse legacy multiplier yields bogus
+    // values (channel index * 100 → 100,200,300,...,900 where 300/600/700/900 aren't real
+    // RSD notes). Whenever a 9-channel unit produces any non-RSD value, snap the whole
+    // table to the known Serbian denominations so notes are always credited correctly.
+    const RSD_9: [i64; 9] = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+    if channel_count == RSD_9.len() && channel_values.iter().any(|v| !RSD_9.contains(v)) {
+        channel_values = RSD_9.to_vec();
+    }
     Ok(SetupData { channel_values })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_setup_response;
+
+    const RSD: [i64; 9] = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+
+    #[test]
+    fn parses_real_unit_expanded_values() {
+        // Exact Setup Request response captured from the deployed NV9 (RSD, 9 channels,
+        // protocol 6) — includes the expanded 4-byte little-endian per-channel value block.
+        let response: [u8; 98] = [
+            0xF0, 0x00, 0x30, 0x33, 0x38, 0x34, 0x52, 0x53, 0x44, 0x00, 0x00, 0x00, 0x09,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, // channel values (indices)
+            0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, // channel security
+            0x00, 0x00, 0x64, // real value multiplier (100)
+            0x06, // protocol version
+            0x52, 0x53, 0x44, 0x52, 0x53, 0x44, 0x52, 0x53, 0x44, 0x52, 0x53, 0x44, 0x52, 0x53,
+            0x44, 0x52, 0x53, 0x44, 0x52, 0x53, 0x44, 0x52, 0x53, 0x44, 0x52, 0x53,
+            0x44, // 9x "RSD" per-channel country codes
+            0x0A, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, // 10,20,50
+            0x64, 0x00, 0x00, 0x00, 0xC8, 0x00, 0x00, 0x00, 0xF4, 0x01, 0x00, 0x00, // 100,200,500
+            0xE8, 0x03, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00, 0x88, 0x13, 0x00,
+            0x00, // 1000,2000,5000
+        ];
+        let parsed = parse_setup_response(&response).expect("parse ok");
+        assert_eq!(parsed.channel_values, RSD.to_vec());
+    }
+
+    #[test]
+    fn legacy_result_snaps_to_rsd_for_nine_channels() {
+        // A response WITHOUT the expanded block: legacy would compute channel*100 =
+        // 100..900 (bogus), which must snap to the real RSD table.
+        let response: [u8; 35] = [
+            0xF0, 0x00, 0x30, 0x33, 0x38, 0x34, 0x52, 0x53, 0x44, 0x00, 0x00, 0x00, 0x09,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+            0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
+            0x00, 0x00, 0x64, // real multiplier 100
+            0x01, // protocol
+        ];
+        let parsed = parse_setup_response(&response).expect("parse ok");
+        assert_eq!(parsed.channel_values, RSD.to_vec());
+    }
 }
 
 fn u24_be(bytes: &[u8]) -> i64 {
