@@ -122,10 +122,11 @@ pub async fn start_payment(
         .map_err(|_| KioskError::Other("plaćanje prekinuto".into()))?
         .map_err(|_| KioskError::Other("plaćanje prekinuto".into()))?;
 
-    // Take the handle out on its own line, then drop it OUTSIDE the lock (its Drop joins
-    // threads — must not run while the mutex is held).
+    // Take the handle out, then reap its threads in the BACKGROUND so the response — and
+    // the frontend switch to the printing screen — never waits on validator/coordinator
+    // thread cleanup (which can take a poll cycle or two on real hardware).
     let handle = state.payment.lock().take();
-    drop(handle);
+    tauri::async_runtime::spawn_blocking(move || drop(handle));
 
     let db = state.db.clone();
     match end {

@@ -1,4 +1,4 @@
-import { getState, setState, showToast, Screen, total, toApiCart, type AppState } from "../state";
+import { getState, setState, Screen, total, toApiCart, type AppState } from "../state";
 import { startPayment, cancelPayment, onPaymentProgress } from "../api";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ScreenController } from "./welcome";
@@ -88,8 +88,11 @@ export function mountPay(container: HTMLElement): ScreenController {
       if (settled) return;
       settled = true;
       unlisten?.();
-      showToast(`Plaćanje nije uspelo: ${String(err)}`);
-      setState({ screen: Screen.Select });
+      // Show the failure ON the pay screen (persistent) so it's diagnosable instead of a
+      // silent jump back to selection.
+      statusEl.textContent = `Greška pri plaćanju: ${String(err)}`;
+      statusEl.classList.add("pay-status-warn");
+      window.setTimeout(() => setState({ screen: Screen.Select }), 6000);
     });
 
   const onCancel = (): void => {
